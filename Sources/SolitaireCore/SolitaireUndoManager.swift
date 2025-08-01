@@ -6,7 +6,6 @@
 //
 
 // or actor?
-#if hasFeature(Embedded)
 class SolitaireUndoManager {
     private var stack: [SolitaireMove] = []
     private var pointer = 0
@@ -163,4 +162,3 @@ class EmbeddedUndoManager<TargetType: AnyObject> {
         pointer = stack.count - 1
     }
 }
-#endif
