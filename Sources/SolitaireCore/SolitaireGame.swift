@@ -223,7 +223,7 @@ extension SolitaireGame {
         guard let cardIndex = pile.cards.firstIndex(of: card) else { return false }
 
         for i in (cardIndex + 1)..<pile.cards.count {
-            guard lastCard.isInSequence(pile.cards[i]) && lastCard.isOppositeColor(pile.cards[i]) else { return false }
+            guard lastCard.isInSequence(pile.cards[i]) && lastCard.isOppositeColor(pile.cards[i]) && lastCard.isVisible else { return false }
             lastCard = pile.cards[i]
         }
 
