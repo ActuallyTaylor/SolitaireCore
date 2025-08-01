@@ -8,15 +8,15 @@
 // or actor?
 #if hasFeature(Embedded)
 class SolitaireUndoManager {
-    // private var stack: [SolitaireMove] = []
-    // private var pointer = 0
-//
-    // var target: SolitaireGame? = nil
+    private var stack: [SolitaireMove] = []
+    private var pointer = 0
+
+    var target: SolitaireGame? = nil
 
     @discardableResult
     func undo() -> Bool {
-        // guard  pointer < stack.count && pointer >= 0 else { return false }
-        // let moveToUndo = stack[pointer]
+        guard  pointer < stack.count && pointer >= 0 else { return false }
+//        let moveToUndo = stack[pointer]
 
 
         return true
@@ -29,19 +29,21 @@ class SolitaireUndoManager {
     }
 
     func addMove(_ move: SolitaireMove){
-        // stack.append(move)
+        stack.append(move)
     }
 
-    // func reverseMove(move: SolitaireMove) {
-    //     switch move {
-    //     case .drawStock:
-    //         break
-    //     case .reStock:
-    //         break
-    //     case .regular(let card, let sourcePile, let destinationPile):
-    //         break
-    //     }
-    // }
+//    func reverseMove(move: SolitaireMove) {
+//        switch move {
+//        case .drawStock:
+//            break
+//        case .reStock:
+//            break
+//        case .regular(let card, let sourcePile, let destinationPile):
+//            break
+//        case .none:
+//            break
+//        }
+//    }
 
 
     // func reverseStock() {

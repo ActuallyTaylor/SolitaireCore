@@ -18,7 +18,7 @@ let package = Package(
         ),
         .library(
             name: "EmbeddedSolitaireCore",
-            targets: ["EmbeddedSolitaireCore", "CWrapper"]
+            targets: ["EmbeddedSolitaireCore"]
         ),
     ],
     targets: [
@@ -29,7 +29,6 @@ let package = Package(
         ),
         .target(
             name: "EmbeddedSolitaireCore",
-            dependencies: ["CWrapper"],
             swiftSettings: [
                 .enableExperimentalFeature("Embedded"),
                 .unsafeFlags([
@@ -41,9 +40,6 @@ let package = Package(
                     "-Xcc", "-DTARGET_EXTENSION"
                 ])
             ],
-        ),
-        .target(
-            name: "CWrapper"
         ),
         .target(
             name: "SolitaireCore.SwiftUI",

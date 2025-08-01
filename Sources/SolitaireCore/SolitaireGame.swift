@@ -19,11 +19,7 @@ struct GameConfiguration {
 }
 
 public final class SolitaireGame {
-    #if hasFeature(Embedded)
     private let undoManager: SolitaireUndoManager = SolitaireUndoManager()
-    #else
-    private let undoManager: UndoManager = UndoManager()
-    #endif
 
     private let config: GameConfiguration = .init(
         canMoveFromWasteToFoundation: true,
@@ -287,22 +283,22 @@ extension SolitaireGame {
         moves += 1
 
         #if !hasFeature(Embedded)
-        undoManager.registerUndo(withTarget: self) { object in
-           destination.remove(cards: originalCardstoMove)
-           pile.addCards(originalCardstoMove)
-
-           if index >= 1 {
-               pile.cards[index - 1].isVisible = false
-           }
-
-           if object.config.undoAddsMove {
-               object.moves += 1
-           } else {
-               object.moves -= 1
-           }
-
-           object.score -= scoreChange
-        }
+//        undoManager.registerUndo(withTarget: self) { object in
+//           destination.remove(cards: originalCardstoMove)
+//           pile.addCards(originalCardstoMove)
+//
+//           if index >= 1 {
+//               pile.cards[index - 1].isVisible = false
+//           }
+//
+//           if object.config.undoAddsMove {
+//               object.moves += 1
+//           } else {
+//               object.moves -= 1
+//           }
+//
+//           object.score -= scoreChange
+//        }
         #endif
 
         return true
@@ -349,16 +345,16 @@ extension SolitaireGame {
         moves += 1
 
         #if !hasFeature(Embedded)
-        undoManager.registerUndo(withTarget: self) { object in
-            object.stock().addCard(originalCardState)
-            object.waste().remove(card: originalCardState)
-
-            if object.config.undoAddsMove {
-                object.moves += 1
-            } else {
-                object.moves -= 1
-            }
-        }
+//        undoManager.registerUndo(withTarget: self) { object in
+//            object.stock().addCard(originalCardState)
+//            object.waste().remove(card: originalCardState)
+//
+//            if object.config.undoAddsMove {
+//                object.moves += 1
+//            } else {
+//                object.moves -= 1
+//            }
+//        }
         #endif
 
         return true
@@ -386,19 +382,19 @@ extension SolitaireGame {
         moves += 1
 
         #if !hasFeature(Embedded)
-        undoManager.registerUndo(withTarget: self) { object in
-            object.swapPiles(object.waste(), object.stock())
-            object.waste().cards.forEach({$0.isVisible = true})
-            object.waste().reverse()
-            object.restocks -= 1
-            object.score -= scoreChange
-
-            if object.config.undoAddsMove {
-                object.moves += 1
-            } else {
-                object.moves -= 1
-            }
-        }
+//        undoManager.registerUndo(withTarget: self) { object in
+//            object.swapPiles(object.waste(), object.stock())
+//            object.waste().cards.forEach({$0.isVisible = true})
+//            object.waste().reverse()
+//            object.restocks -= 1
+//            object.score -= scoreChange
+//
+//            if object.config.undoAddsMove {
+//                object.moves += 1
+//            } else {
+//                object.moves -= 1
+//            }
+//        }
         #endif
 
         return true
