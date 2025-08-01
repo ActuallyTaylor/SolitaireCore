@@ -19,7 +19,7 @@ struct GameStateTests {
             [], [], [], [], [], [], []
         ],
     ])
-    func testCompletedGame( gameRep: [[String]]) {
+    func testCompletedGame(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
         #expect(game.isGameWon())
     }
@@ -44,7 +44,7 @@ struct GameStateTests {
         ],
 
     ])
-    func testInvalidCompletedGame(_ gameRep: [[String]]) {
+    func testInvalidCompletedGame(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
         #expect(!game.isGameWon())
     }
@@ -71,7 +71,7 @@ struct GameStateTests {
         // Test put waste into stock
         (gameRep: [[], ["K♥", "Q♥"], [], [], [], [], [], [], [], [], [], [], []], moveCount: 1),
     ])
-    func testNumverOfValidMoves(_ config: (gameRep: [[String]], moveCount: Int)) {
+    func testNumverOfValidMoves(config: (gameRep: [[String]], moveCount: Int)) {
         let game = SolitaireGame.loadGame(from: config.gameRep)
         let validMoves = game.validMoves()
         #expect(validMoves.count == config.moveCount)

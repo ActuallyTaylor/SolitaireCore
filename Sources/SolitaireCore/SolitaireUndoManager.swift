@@ -5,98 +5,82 @@
 //  Created by Taylor Lineman on 6/27/25.
 //
 
-// or actor?
+enum UndoPackage {
+    case moveCards(cards: [PlayingCard], source: Pile, destination: Pile, scoreChange: Int)
+    case drawStock(card: PlayingCard, scoreChange: Int)
+    case restock
+}
+
 class SolitaireUndoManager {
-    private var stack: [SolitaireMove] = []
-    private var pointer = 0
-
+    private var stack: [UndoPackage] = []
+    private var pointer = -1
+    
     var target: SolitaireGame? = nil
-
-    @discardableResult
-    func undo() -> Bool {
-        guard  pointer < stack.count && pointer >= 0 else { return false }
-//        let moveToUndo = stack[pointer]
-
-
-        return true
+    
+    func registerUndo(package: UndoPackage) {
+        stack.append(package)
+        pointer += 1
     }
-
+    
+    func undo() {
+        guard  pointer < stack.count && pointer >= 0 else { return }
+        let packageToUndo = stack[pointer]
+        undoPackage(package: packageToUndo)
+        pointer -= 1
+        
+        guard let target else { print("No target set"); return }
+        if target.config.undoAddsMove {
+            target.moves += 1
+        } else {
+            target.moves -= 1
+        }
+    }
+    
     // We do not need to support redo... And I don't totally wanna figure it out right now so I won't implement it yet.
-    @discardableResult
-    func redo() -> Bool {
-        return false
-    }
-
-    func addMove(_ move: SolitaireMove){
-        stack.append(move)
-    }
-
-//    func reverseMove(move: SolitaireMove) {
-//        switch move {
-//        case .drawStock:
-//            break
-//        case .reStock:
-//            break
-//        case .regular(let card, let sourcePile, let destinationPile):
-//            break
-//        case .none:
-//            break
-//        }
+//    func redo() {
+//        
 //    }
+    
+    private func undoPackage(package: UndoPackage) {
+        switch package {
+        case .moveCards(let cards, let source, let destination, let scoreChange):
+            undoMoveCardPackage(cards: cards, source: source, destination: destination, scoreChange: scoreChange)
+        case .drawStock(let card, let scoreChange):
+            undoStockPackage(card: card, scoreChange: scoreChange)
+        case .restock:
+            undoRestockPackage(package: package)
+        }
+    }
+    
+    private func undoMoveCardPackage(cards: [PlayingCard], source: Pile, destination: Pile, scoreChange: Int) {
+        source.top()?.isVisible = false
+        destination.remove(cards: cards)
+        source.add(cards: cards)
 
-
-    // func reverseStock() {
-
-
-/*
-guard let topOfStock = stock().pop() else { return false }
-let originalCardState = topOfStock.copy()
-waste().addCard(topOfStock)
-topOfStock.isVisible = true
-
-moves += 1
-
-undoManager.registerUndo(withTarget: self) { object in
-    object.stock().addCard(originalCardState)
-    object.waste().remove(card: originalCardState)
-
-    if object.config.undoAddsMove {
-        object.moves += 1
-    } else {
-        object.moves -= 1
+        target?.score -= scoreChange
+    }
+    
+    private func undoStockPackage(card: PlayingCard, scoreChange: Int) {
+        guard let target else { print("No target set"); return }
+        // Access the waste and stock directly. Not the best but it reduces the data size for the UndoPackage
+        target.stock().add(card: card)
+        target.waste().remove(card: card)
+        
+        target.score -= scoreChange
+    }
+    
+    private func undoRestockPackage(package: UndoPackage) {
+        guard let target else { print("No target set"); return }
+        
+        target.swapPiles(target.waste(), target.stock())
+        target.waste().cards.forEach({$0.isVisible = true})
+        target.waste().reverse()
+        target.restocks -= 1
+        target.score -= 1
     }
 }
-*/
-    // }
-}
-
 /*
-MOVE
-undoManager.registerUndo(withTarget: self) { object in
-   destination.remove(cards: originalCardstoMove)
-   pile.addCards(originalCardstoMove)
-
-   if index >= 1 {
-       pile.cards[index - 1].isVisible = false
-   }
-
-   if object.config.undoAddsMove {
-       object.moves += 1
-   } else {
-       object.moves -= 1
-   }
-
-   object.score -= scoreChange
-}
-
 STOCK
-guard let topOfStock = stock().pop() else { return false }
-let originalCardState = topOfStock.copy()
-waste().addCard(topOfStock)
-topOfStock.isVisible = true
-
-moves += 1
-
 undoManager.registerUndo(withTarget: self) { object in
     object.stock().addCard(originalCardState)
     object.waste().remove(card: originalCardState)
@@ -124,41 +108,3 @@ undoManager.registerUndo(withTarget: self) { object in
     }
 }
 */
-
-class EmbeddedUndoManager<TargetType: AnyObject> {
-    typealias Event = (handler: Handler, target: TargetType)
-    typealias Handler = (TargetType) -> Void
-    var stack: [Event] = []
-    var pointer = 0
-
-    init() {
-
-    }
-
-    @discardableResult
-    func undo() -> Bool {
-        print("Undoing \(pointer), \(stack.count)")
-        guard  pointer < stack.count && pointer >= 0 else { return false }
-        print("Undoing")
-        let eventToUndo = stack[pointer]
-        eventToUndo.handler(eventToUndo.target)
-        pointer -= 1
-
-        return true
-    }
-
-    // We do not need to support redo... And I don't totally wanna figure it out right now so I won't implement it yet.
-    @discardableResult
-    func redo() -> Bool {
-        // guard stack.count < pointer && pointer >= 0 else { return }
-        // guard let eventToUndo = stack[pointer] else { return false }
-        // eventToUndo.handler(eventToUndo.target)
-        // pointer -= 1
-        return false
-    }
-
-    func registerUndo(withTarget target: TargetType, handler: @escaping (TargetType) -> Void) {
-        stack.append((handler, target))
-        pointer = stack.count - 1
-    }
-}

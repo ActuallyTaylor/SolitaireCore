@@ -55,12 +55,12 @@ public final class Pile: Identifiable, CustomStringConvertible {
     }
 
 
-    func addCard(_ card: PlayingCard) {
+    func add(card: PlayingCard) {
         card.pile = self
         cards.append(card)
     }
 
-    func addCards(_ cards: [PlayingCard]) {
+    func add(cards: [PlayingCard]) {
         for card in cards {
             card.pile = self
             card.isVisible = true

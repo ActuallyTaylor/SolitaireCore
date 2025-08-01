@@ -27,7 +27,7 @@ struct MovementTests {
         [[], [], [], [], [], [], ["3♣"], ["2♦"], [], [], [], [], []],
         [[], [], [], [], [], [], ["3♦"], ["2♣"], [], [], [], [], []],
     ])
-    func testCardMovement(_ gameRep: [[String]]) {
+    func testCardMovement(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
@@ -42,7 +42,7 @@ struct MovementTests {
         [[], [], ["A♥"], [], [], [], ["3♥"], [], [], [], [], [], []],
         [[], [], ["A♥"], [], [], [], ["2♠"], [], [], [], [], [], []],
     ])
-    func testInvalidCardMovement(_ gameRep: [[String]]) {
+    func testInvalidCardMovement(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
         let foundationOne = game.piles[GamePileIndex.foundationOne.rawValue]
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
@@ -58,7 +58,7 @@ struct MovementTests {
         [[], [], [], [], [], [], ["3♥", "2♠"], ["4♠"], [], [], [], [], []],
         [[], [], [], [], [], [], ["3♠", "2♥"], ["4♥"], [], [], [], [], []]
     ])
-    func testMoveMultipleCardsValid(_ gameRep: [[String]]) {
+    func testMoveMultipleCardsValid(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
@@ -75,7 +75,7 @@ struct MovementTests {
         // Tests moving a card onto a card not one rank above
         [[], [], [], [], [], [], ["3♥", "2♠"], ["5♠"], [], [], [], [], []]
     ])
-    func testMoveMultipleCardsInvalid( gameRep: [[String]]) {
+    func testMoveMultipleCardsInvalid(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
@@ -83,5 +83,99 @@ struct MovementTests {
         let threeOfHearts = columnOne.getCards().first!
         
         #expect(!game.move(.regular(card: threeOfHearts, sourcePile: columnOne, destinationPile: columnTwo)))
+    }
+    
+    @Test("Test picking up cards", arguments: [
+        // Tests moving a card onto another that is the same color (fails)
+        [[], [], [], [], [], [], ["3♥", "2♠"], [], [], [], [], [], []],
+    ])
+    func testPickUpCardsValid(gameRep: [[String]]) {
+        let game = SolitaireGame.loadGame(from: gameRep)
+        let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
+        
+        let twoOfSpades = columnOne.getCards().last!
+        twoOfSpades.isVisible = true
+        
+        #expect(game.canSelectCardInPile(card: twoOfSpades, pile: columnOne))
+        
+        let threeOfHearts = columnOne.getCards().first!
+        threeOfHearts.isVisible = true
+
+        #expect(game.canSelectCardInPile(card: threeOfHearts, pile: columnOne))
+    }
+    
+    @Test("Test picking up cards fails because it is picking up an invisible card", arguments: [
+        // Tests moving a card onto another that is the same color (fails)
+        [[], [], [], [], [], [], ["3♥", "2♠"], [], [], [], [], [], []],
+    ])
+    func testPickUpCardsInvalidBecauseInvisible(gameRep: [[String]]) {
+        let game = SolitaireGame.loadGame(from: gameRep)
+        let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
+        
+        let twoOfSpades = columnOne.getCards().last!
+        twoOfSpades.isVisible = true
+        
+        #expect(game.canSelectCardInPile(card: twoOfSpades, pile: columnOne))
+        
+        let threeOfHearts = columnOne.getCards().first!
+        threeOfHearts.isVisible = false
+
+        #expect(!game.canSelectCardInPile(card: threeOfHearts, pile: columnOne))
+    }
+
+    @Test("Test draw from stock", arguments: [
+        // Draw one card from stock into waste
+        [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []],
+        [["K♥", "Q♥"], [], [], [], [], [], [], [], [], [], [], [], []],
+    ])
+    func testDrawFromStockMove(gameRep: [[String]]) {
+        let game = SolitaireGame.loadGame(from: gameRep)
+        let stock = game.piles[GamePileIndex.stock.rawValue]
+        let originalStockCount = stock.cards.count
+        let waste = game.piles[GamePileIndex.waste.rawValue]
+
+        #expect(game.move(.drawStock))
+        #expect(stock.getCards().count == originalStockCount - 1)
+        #expect(waste.getCards().count == 1)
+    }
+
+    @Test("Test restock", arguments: [
+        // Restock one card into stock
+        [[], ["K♥"], [], [], [], [], [], [], [], [], [], [], []],
+        // Restock two cards into stock
+        [[], ["Q♥", "K♥"], [], [], [], [], [], [], [], [], [], [], []]
+    ])
+    func testRestockMove(gameRep: [[String]]) {
+        let game = SolitaireGame.loadGame(from: gameRep)
+        let stock = game.piles[GamePileIndex.stock.rawValue]
+        let waste = game.piles[GamePileIndex.waste.rawValue]
+        let originalWasteCount = waste.cards.count
+        let originalWasteCards = waste.cards.map({$0.copy()})
+        
+        #expect(game.move(.reStock))
+        #expect(stock.getCards().count == originalWasteCount)
+        #expect(waste.getCards().count == 0)
+        
+        // Make sure that the cards went back into the stock reversed
+        #expect(stock.getCards() == originalWasteCards.reversed())
+    }
+
+    @Test("Test draw fromn stock shortcut function")
+    func testDrawFromStockShortcutFunction() {
+        let gameRep: [[String]] = [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []]
+        let game = SolitaireGame.loadGame(from: gameRep)
+        
+        let stock = game.piles[GamePileIndex.stock.rawValue]
+        let waste = game.piles[GamePileIndex.waste.rawValue]
+
+        // First call should draw from stock -> waste
+        game.drawFromStock()
+        #expect(stock.getCards().count == 0)
+        #expect(waste.getCards().count == 1)
+        
+        // Second call should resttock
+        game.drawFromStock()
+        #expect(stock.getCards().count == 1)
+        #expect(waste.getCards().count == 0)
     }
 }

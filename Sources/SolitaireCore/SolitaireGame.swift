@@ -21,7 +21,7 @@ struct GameConfiguration {
 public final class SolitaireGame {
     private let undoManager: SolitaireUndoManager = SolitaireUndoManager()
 
-    private let config: GameConfiguration = .init(
+    internal let config: GameConfiguration = .init(
         canMoveFromWasteToFoundation: true,
         undoAddsMove: true
     )
@@ -43,12 +43,12 @@ public final class SolitaireGame {
         .foundationFour: .none
     ]
 
-    public private(set) var restocks: Int = 0
-    public private(set) var moves: Int = 0
+    public internal(set) var restocks: Int = 0
+    public internal(set) var moves: Int = 0
 
     // Used to cap score at 0
     private var _score: Int = 0
-    public private(set) var score: Int {
+    public internal(set) var score: Int {
         get { _score }
         set { _score = max(0, newValue) }
     }
@@ -57,13 +57,12 @@ public final class SolitaireGame {
     public var piles: [Pile] = []
 
     internal init(piles: [Pile]) {
+        undoManager.target = self
         self.piles = piles
     }
 
     public init() {
-        // #if hasFeature(Embedded)
-        // undoManager.target = self
-        // #endif
+        undoManager.target = self
         // Create GamePileIndex.count piles
         resetPiles()
         // Populate piles
@@ -110,7 +109,7 @@ public final class SolitaireGame {
         var columnPointer = startingColumnIndex
         while startingColumnIndex <= endingColumnIndex {
             guard let card = deck.popLast() else { break }
-            piles[columnPointer].addCard(card)
+            piles[columnPointer].add(card: card)
 
             columnPointer += 1
             if columnPointer > endingColumnIndex {
@@ -130,7 +129,7 @@ public final class SolitaireGame {
 
         while !deck.isEmpty {
             guard let card = deck.popLast() else { break }
-            piles[GamePileIndex.stock.rawValue].addCard(card)
+            piles[GamePileIndex.stock.rawValue].add(card: card)
         }
         #if PROFILE
         signposter.emitEvent("Hand population complete.", id: signpostID)
@@ -198,9 +197,9 @@ extension SolitaireGame {
         undoManager.undo()
     }
 
-    public func redo() {
-        undoManager.redo()
-    }
+//    public func redo() {
+//        undoManager.redo()
+//    }
 }
 
 // MARK: Movement
@@ -219,7 +218,9 @@ extension SolitaireGame {
         guard let cardIndex = pile.cards.firstIndex(of: card) else { return false }
 
         for i in (cardIndex + 1)..<pile.cards.count {
-            guard lastCard.isInSequence(pile.cards[i]) && lastCard.isOppositeColor(pile.cards[i]) && lastCard.isVisible else { return false }
+            guard lastCard.isInSequence(pile.cards[i]) else { return false }
+            guard lastCard.isOppositeColor(pile.cards[i]) else { return false }
+            guard lastCard.isVisible else { return false }
             lastCard = pile.cards[i]
         }
 
@@ -228,10 +229,6 @@ extension SolitaireGame {
 
     @discardableResult
     public func move(_ move: SolitaireMove) -> Bool {
-        #if hasFeature(Embedded)
-        undoManager.addMove(move)
-        #endif
-
         switch move {
         case .regular(let card, let sourcePile, let destinationPile):
             return moveCard(card: card, from: sourcePile, to: destinationPile)
@@ -253,7 +250,7 @@ extension SolitaireGame {
         let cardsToMove = pile.pop(count: runLength)
         let originalCardstoMove = cardsToMove.map({$0.copy()})
 
-        destination.addCards(cardsToMove)
+        destination.add(cards: cardsToMove)
 
         var scoreChange: Int = 0
 
@@ -282,25 +279,8 @@ extension SolitaireGame {
         score += scoreChange
         moves += 1
 
-        #if !hasFeature(Embedded)
-//        undoManager.registerUndo(withTarget: self) { object in
-//           destination.remove(cards: originalCardstoMove)
-//           pile.addCards(originalCardstoMove)
-//
-//           if index >= 1 {
-//               pile.cards[index - 1].isVisible = false
-//           }
-//
-//           if object.config.undoAddsMove {
-//               object.moves += 1
-//           } else {
-//               object.moves -= 1
-//           }
-//
-//           object.score -= scoreChange
-//        }
-        #endif
-
+        undoManager.registerUndo(package: .moveCards(cards: originalCardstoMove, source: pile, destination: destination, scoreChange: scoreChange))
+        
         return true
     }
 
@@ -339,23 +319,12 @@ extension SolitaireGame {
     private func drawStock() -> Bool {
         guard let topOfStock = stock().pop() else { return false }
         let originalCardState = topOfStock.copy()
-        waste().addCard(topOfStock)
+        waste().add(card: topOfStock)
         topOfStock.isVisible = true
 
         moves += 1
 
-        #if !hasFeature(Embedded)
-//        undoManager.registerUndo(withTarget: self) { object in
-//            object.stock().addCard(originalCardState)
-//            object.waste().remove(card: originalCardState)
-//
-//            if object.config.undoAddsMove {
-//                object.moves += 1
-//            } else {
-//                object.moves -= 1
-//            }
-//        }
-        #endif
+        undoManager.registerUndo(package: .drawStock(card: originalCardState, scoreChange: 1))
 
         return true
     }
@@ -380,27 +349,13 @@ extension SolitaireGame {
         }
         score += scoreChange
         moves += 1
-
-        #if !hasFeature(Embedded)
-//        undoManager.registerUndo(withTarget: self) { object in
-//            object.swapPiles(object.waste(), object.stock())
-//            object.waste().cards.forEach({$0.isVisible = true})
-//            object.waste().reverse()
-//            object.restocks -= 1
-//            object.score -= scoreChange
-//
-//            if object.config.undoAddsMove {
-//                object.moves += 1
-//            } else {
-//                object.moves -= 1
-//            }
-//        }
-        #endif
+        
+        undoManager.registerUndo(package: .restock)
 
         return true
     }
 
-    private func swapPiles(_ pile1: Pile, _ pile2: Pile) {
+    internal func swapPiles(_ pile1: Pile, _ pile2: Pile) {
         let pile1Cards = pile1.cards
         pile1.cards = pile2.cards
         pile2.cards = pile1Cards
