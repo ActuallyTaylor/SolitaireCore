@@ -193,8 +193,8 @@ extension SolitaireGame {
 
 // MARK: Undo & Redo
 extension SolitaireGame {
-    public func undo() {
-        undoManager.undo()
+    public func undo() throws(UndoError) {
+        try undoManager.undo()
     }
 
 //    public func redo() {
@@ -280,7 +280,7 @@ extension SolitaireGame {
         moves += 1
 
         undoManager.registerUndo(package: .moveCards(cards: originalCardstoMove, source: pile, destination: destination, scoreChange: scoreChange))
-        
+
         return true
     }
 
@@ -349,7 +349,7 @@ extension SolitaireGame {
         }
         score += scoreChange
         moves += 1
-        
+
         undoManager.registerUndo(package: .restock)
 
         return true

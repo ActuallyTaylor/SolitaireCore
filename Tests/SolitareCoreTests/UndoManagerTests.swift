@@ -17,7 +17,7 @@ struct UndoManagerTests {
         // Stack
         [[], [], [], [], [], [], ["4♥"], ["3♠", "2♥"], [], [], [], [], []],
     ])
-    func testUndoCardMovement(_ gameRep: [[String]]) {
+    func testUndoCardMovement(_ gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let originalColumnOneCards = columnOne.cards.map({$0.copy()})
@@ -29,7 +29,7 @@ struct UndoManagerTests {
         
         #expect(game.move(.regular(card: cardToMove, sourcePile: columnTwo, destinationPile: columnOne)))
         
-        game.undo()
+        try game.undo()
         
         #expect(columnOne.cards == originalColumnOneCards)
         #expect(columnTwo.cards == originalColumnTwoCards)
@@ -42,7 +42,7 @@ struct UndoManagerTests {
         // Stack
         [[], [], [], [], [], [], ["5♥"], ["4♠", "3♥"], ["2♠"], [], [], [], []],
     ])
-    func testMultipleMoveUndos(_ gameRep: [[String]]) {
+    func testUndoMultipleMoves(_ gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let originalColumnOneCards = columnOne.cards.map({$0.copy()})
@@ -64,26 +64,72 @@ struct UndoManagerTests {
         #expect(game.move(.regular(card: secondCardToMove, sourcePile: columnThree, destinationPile: columnOne)))
 
         // Undo Move Two
-        game.undo()
+        try game.undo()
         #expect(columnOne.cards == originalColumnOneCards + originalColumnTwoCards)
         #expect(columnTwo.cards == [])
         #expect(columnThree.cards == originalColumnThreeCards)
         
 
-        // Undo Move Three
-        game.undo()
+        // Undo Move One
+        try game.undo()
         #expect(columnOne.cards == originalColumnOneCards)
         #expect(columnTwo.cards == originalColumnTwoCards)
         #expect(columnThree.cards == originalColumnThreeCards)
     }
+    
+    @Test("Test undos properly wiped", arguments: [
+        // Simple
+        [[], [], [], [], [], [], ["4♠"], ["3♥"], ["2♠"], [], [], [], []],
+        
+        // Stack
+        [[], [], [], [], [], [], ["5♥"], ["4♠", "3♥"], ["2♠"], [], [], [], []],
+    ])
+    func testUndosWipedOnMove(_ gameRep: [[String]]) throws {
+        let game = SolitaireGame.loadGame(from: gameRep)
+        let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
+        let originalColumnOneCards = columnOne.cards.map({$0.copy()})
 
+        let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
+        let originalColumnTwoCards = columnTwo.cards.map({$0.copy()})
+        
+        let columnThree = game.piles[GamePileIndex.columnThree.rawValue]
+        let originalColumnThreeCards = columnThree.cards.map({$0.copy()})
+
+        // Move one (Move column two to column one)
+        let firstCardToMove = columnTwo.getCards().first!
+        
+        #expect(game.move(.regular(card: firstCardToMove, sourcePile: columnTwo, destinationPile: columnOne)))
+        #expect(columnOne.cards == originalColumnOneCards + originalColumnTwoCards)
+        #expect(columnTwo.cards == [])
+        #expect(columnThree.cards == originalColumnThreeCards)
+
+
+        // Undo Move One
+        try game.undo()
+        #expect(columnOne.cards == originalColumnOneCards)
+        #expect(columnTwo.cards == originalColumnTwoCards)
+        #expect(columnThree.cards == originalColumnThreeCards)
+
+        // Move two (Move column three to column one)
+        let secondCardToMove = columnThree.getCards().first!
+        
+        #expect(game.move(.regular(card: secondCardToMove, sourcePile: columnThree, destinationPile: columnTwo)))
+        #expect(columnOne.cards == originalColumnOneCards)
+        #expect(columnTwo.cards == originalColumnTwoCards + originalColumnThreeCards)
+        #expect(columnThree.cards == [])
+
+        try game.undo()
+        #expect(columnOne.cards == originalColumnOneCards)
+        #expect(columnTwo.cards == originalColumnTwoCards)
+        #expect(columnThree.cards == originalColumnThreeCards)
+    }
     
     @Test("Test undo draw from stock", arguments: [
         // Draw one card from stock into waste
         [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []],
         [["K♥", "Q♥"], [], [], [], [], [], [], [], [], [], [], [], []],
     ])
-    func testUndoDrawFromStock(gameRep: [[String]]) {
+    func testUndoDrawFromStock(gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
         let stock = game.piles[GamePileIndex.stock.rawValue]
         let originalStockCards = stock.cards.map({$0.copy()})
@@ -93,7 +139,7 @@ struct UndoManagerTests {
 
         #expect(game.move(.drawStock))
         
-        game.undo()
+        try game.undo()
         
         #expect(stock.cards == originalStockCards)
         #expect(waste.cards == originalWasteCards)
@@ -105,7 +151,7 @@ struct UndoManagerTests {
         // Restock two cards into stock
         [[], ["Q♥", "K♥"], [], [], [], [], [], [], [], [], [], [], []]
     ])
-    func testUndoRestock(gameRep: [[String]]) {
+    func testUndoRestock(gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
         let stock = game.piles[GamePileIndex.stock.rawValue]
 
@@ -114,7 +160,9 @@ struct UndoManagerTests {
         
         #expect(game.move(.reStock))
         
-        #expect(stock.cards == originalWasteCards.reversed())
-        #expect(waste.cards == [])
+        try game.undo()
+        
+        #expect(stock.cards == [])
+        #expect(waste.cards == originalWasteCards)
     }
 }
