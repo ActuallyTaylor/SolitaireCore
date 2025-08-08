@@ -55,3 +55,9 @@ public enum GamePileIndex: Int, CaseIterable {
         }
     }
 }
+
+extension GamePileIndex: Comparable {
+    public static func < (lhs: GamePileIndex, rhs: GamePileIndex) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}

@@ -134,7 +134,7 @@ struct MovementTests {
         let originalStockCount = stock.cards.count
         let waste = game.piles[GamePileIndex.waste.rawValue]
 
-        #expect(game.move(.drawStock))
+        #expect(game.move(.drawStock(drawMode: .one)))
         #expect(stock.getCards().count == originalStockCount - 1)
         #expect(waste.getCards().count == 1)
     }
@@ -160,7 +160,7 @@ struct MovementTests {
         #expect(stock.getCards() == originalWasteCards.reversed())
     }
 
-    @Test("Test draw fromn stock shortcut function")
+    @Test("Test draw fromnstock shortcut function")
     func testDrawFromStockShortcutFunction() {
         let gameRep: [[String]] = [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []]
         let game = SolitaireGame.loadGame(from: gameRep)

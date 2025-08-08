@@ -137,7 +137,7 @@ struct UndoManagerTests {
         let waste = game.piles[GamePileIndex.waste.rawValue]
         let originalWasteCards = waste.cards.map({$0.copy()})
 
-        #expect(game.move(.drawStock))
+        #expect(game.move(.drawStock(drawMode: .one)))
         
         try game.undo()
         

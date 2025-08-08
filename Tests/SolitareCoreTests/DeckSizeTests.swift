@@ -8,7 +8,7 @@
 import Testing
 @testable import SolitaireCore
 
-struct InitializationTests {
+struct DeckSizeTests {
     @Test("Validate the right amount of cards are created")
     func validateDeckContents() {
         let game = SolitaireGame()

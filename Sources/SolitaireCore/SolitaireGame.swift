@@ -13,9 +13,21 @@ import os
 import Foundation
 #endif
 
+public typealias ScoreInteger = UInt16
+public typealias RestockInteger = UInt16
+public typealias MoveInteger = UInt16
+public typealias DataVersionInteger = UInt8
+
+// TODO: Add tests for three draw mode
+public enum DrawMode: UInt8 {
+    case one
+    case three
+}
+
 struct GameConfiguration {
     let canMoveFromWasteToFoundation: Bool
     let undoAddsMove: Bool
+    let drawMode: DrawMode
 }
 
 public final class SolitaireGame {
@@ -23,7 +35,8 @@ public final class SolitaireGame {
 
     internal let config: GameConfiguration = .init(
         canMoveFromWasteToFoundation: true,
-        undoAddsMove: true
+        undoAddsMove: true,
+        drawMode: .three
     )
 
     #if PROFILE
@@ -43,30 +56,54 @@ public final class SolitaireGame {
         .foundationFour: .none
     ]
 
-    public internal(set) var restocks: Int = 0
-    public internal(set) var moves: Int = 0
-
+    public private(set) var restocks: RestockInteger = 0
+    public private(set) var moves: MoveInteger = 0
     // Used to cap score at 0
-    private var _score: Int = 0
-    public internal(set) var score: Int {
+    private var _score: ScoreInteger = 0
+    public private(set) var score: ScoreInteger {
         get { _score }
-        set { _score = max(0, newValue) }
+        set { print("Score Changed original: \(_score), new: \(newValue)"); _score = max(0, newValue) }
     }
+    public private(set) var isSolved: Bool = false
 
-//private(set)
     public var piles: [Pile] = []
+    public private(set) var seed: UInt64
 
     internal init(piles: [Pile]) {
+        self.seed = SolitaireGame.generateSeed()
+
         undoManager.target = self
         self.piles = piles
+        // Check if the game inputed is a solvedGame
+        self.isSolved = checkIsGameSolved()
     }
 
     public init() {
+        self.seed = SolitaireGame.generateSeed()
+
         undoManager.target = self
         // Create GamePileIndex.count piles
         resetPiles()
         // Populate piles
         populatePiles()
+    }
+
+    /// Creates a Solitaire Game with the specified seed.
+    /// Note: The seed may change as the version of swift changes. This is a side effect of shuffle not being a permanent implementation.
+    /// - Parameter seed: The seed of the solitaire game to generate
+    public init(seed: UInt64) {
+        self.seed = seed
+
+        undoManager.target = self
+        // Create GamePileIndex.count piles
+        resetPiles()
+        // Populate piles
+        populatePiles()
+    }
+
+
+    static func generateSeed() -> UInt64 {
+        return UInt64.random(in: 0..<UInt64.max)
     }
 
     // public func printPiles() {
@@ -97,7 +134,12 @@ public final class SolitaireGame {
         // There should always be 52 cards
         assert(deck.count == SolitaireGame.totalCards)
 
-        deck.shuffle()
+//        if seed != -1 {
+//            var rng = SeededRandomNumberGenerator(seed: seed)
+//            deck.shuffle(using: &rng)
+//        } else {
+            deck.shuffle()
+//        }
 
         #if PROFILE
         signposter.emitEvent("Column population complete.", id: signpostID)
@@ -142,6 +184,33 @@ public final class SolitaireGame {
         for id in GamePileIndex.allCases {
             piles.append(Pile(id: id))
         }
+    }
+}
+
+// MARK: Score, Moves, Restock Setters
+extension SolitaireGame {
+    func addMoves(value: UInt16) {
+        moves.safeAdd(value: value)
+    }
+
+    func subtractMoves(value: UInt16) {
+        moves.safeSubtract(value: value)
+    }
+
+    func addScore(value: UInt16) {
+        score.safeAdd(value: value)
+    }
+
+    func subtractScore(value: UInt16) {
+        score.safeSubtract(value: value)
+    }
+
+    func addRestocks(value: UInt16) {
+        restocks.safeAdd(value: value)
+    }
+
+    func subtractRestocks(value: UInt16) {
+        restocks.safeSubtract(value: value)
     }
 }
 
@@ -205,8 +274,8 @@ extension SolitaireGame {
 // MARK: Movement
 extension SolitaireGame {
     public func drawFromStock() {
-        let result = move(.drawStock)
-
+        let result = move(.drawStock(drawMode: config.drawMode))
+        
         // Check to see if we could draw a card, if not put the waste back into the stock
         if !result {
             move(.reStock)
@@ -229,13 +298,17 @@ extension SolitaireGame {
 
     @discardableResult
     public func move(_ move: SolitaireMove) -> Bool {
+        defer {
+            self.isSolved = checkIsGameSolved()
+        }
+
         switch move {
         case .regular(let card, let sourcePile, let destinationPile):
             return moveCard(card: card, from: sourcePile, to: destinationPile)
         case .reStock:
             return restock()
-        case .drawStock:
-            return drawStock()
+        case .drawStock(let mode):
+            return drawStock(mode: mode)
         case .none:
             return false
         }
@@ -248,38 +321,47 @@ extension SolitaireGame {
         guard isValidCardRun(below: index, in: pile) else { return false }
         let runLength = pile.cards.count - index
         let cardsToMove = pile.pop(count: runLength)
-        let originalCardstoMove = cardsToMove.map({$0.copy()})
+        let originalCardsToMove = cardsToMove.map({$0.copy()})
 
         destination.add(cards: cardsToMove)
 
-        var scoreChange: Int = 0
+        var scoreChange: ScoreInteger = 0
 
         // Make the card above the moved card visible
         if index >= 1 {
             if !pile.cards[index - 1].isVisible {
-                scoreChange += ScoreEvent.uncoverCard.rawValue
+                scoreChange += ScoreEvent.uncoverCard.scoreChange
                 pile.cards[index - 1].isVisible = true
             }
+        }
+        
+        // Card is being moved out of the waste into a non-foundation pile
+        if pile.id == .waste && !destination.isFoundation {
+            scoreChange += ScoreEvent.moveFromWaste.scoreChange
         }
 
         if !pile.isFoundation && destination.isFoundation, let scoredFoundation = highestScoredFoundationRank[destination.id] {
             if let rank = scoredFoundation {
                 if card.rank > rank {
-                    // Last scored rank, is less than the cards rank so score it
-                    scoreChange += ScoreEvent.movetoFoundation.rawValue
+                    // Last scored rank, is less than the card's rank so score it
+                    scoreChange += ScoreEvent.moveToFoundation.scoreChange
                 }
             } else {
                 // Last rank was un-scored so score it, the rank will be set right after this
-                scoreChange += ScoreEvent.movetoFoundation.rawValue
+                scoreChange += ScoreEvent.moveToFoundation.scoreChange
             }
 
             highestScoredFoundationRank[destination.id] = card.rank
+        }
+        
+        if pile.isColumn && destination.isColumn {
+            scoreChange += ScoreEvent.moveToAnotherPile.scoreChange
         }
 
         score += scoreChange
         moves += 1
 
-        undoManager.registerUndo(package: .moveCards(cards: originalCardstoMove, source: pile, destination: destination, scoreChange: scoreChange))
+        undoManager.registerUndo(package: .moveCards(cards: originalCardsToMove, source: pile.id, destination: destination.id, scoreChange: scoreChange))
 
         return true
     }
@@ -316,15 +398,29 @@ extension SolitaireGame {
         return false
     }
 
-    private func drawStock() -> Bool {
-        guard let topOfStock = stock().pop() else { return false }
-        let originalCardState = topOfStock.copy()
-        waste().add(card: topOfStock)
-        topOfStock.isVisible = true
+    private func drawStock(mode: DrawMode) -> Bool {
+        let numberOfMoves: UInt16 = (mode == .one ? 1 : 3)
 
-        moves += 1
+        var originalCards: [PlayingCard] = []
+        for x in 0..<(mode == .one ? 1 : 3) {
+            guard let topOfStock = stock().pop() else {
+                // We only fail a stock draw if the first draw fails. When drawing more than one card, it is okay if the last 2 are failed draws and only one card is drawn.
+                if x == 0 {
+                    return false
+                } else {
+                    continue
+                }
+            }
+            
+            let originalCardState = topOfStock.copy()
+            originalCards.append(originalCardState)
+            waste().add(card: topOfStock)
+            topOfStock.isVisible = true
 
-        undoManager.registerUndo(package: .drawStock(card: originalCardState, scoreChange: 1))
+            moves += 1
+        }
+        
+        undoManager.registerUndo(package: .drawStock(cards: originalCards, scoreChange: numberOfMoves))
 
         return true
     }
@@ -337,17 +433,18 @@ extension SolitaireGame {
         swapPiles(waste(), stock())
         restocks += 1
 
-        // Score restack
-        var scoreChange: Int = 0
-        switch restocks {
-        case 1..<4:
-            scoreChange = (ScoreEvent.restock.rawValue * 2)
-        case 4...:
-            scoreChange = ScoreEvent.restock.rawValue
-        default:
-            break
+        // Score restock
+        let penalty: UInt16 =  switch config.drawMode {
+        case .one:
+            // In draw one, subtract score after one pass through the stock
+            restocks > 1 ? ScoreEvent.restockDrawOne.scoreChange : 0
+        case .three:
+            // In draw three, subtract score after four passes through the stock
+            restocks > 4 ? ScoreEvent.restockDrawThree.scoreChange : 0
         }
-        score += scoreChange
+        
+        score.safeSubtract(value: penalty)
+
         moves += 1
 
         undoManager.registerUndo(package: .restock)
@@ -364,12 +461,11 @@ extension SolitaireGame {
 
 // Game State
 extension SolitaireGame {
-    public func isGameWon() -> Bool {
+    public func checkIsGameSolved() -> Bool {
         // Check to make sure all piles that are not the foundation are empty
         for pile in piles where !pile.isFoundation {
             guard pile.isEmpty else { return false }
         }
-
 
         let foundationPiles = foundation()
 
@@ -453,7 +549,7 @@ extension SolitaireGame {
 
         // Move card from stock into waste
         if !stock().isEmpty {
-            validMoves.append(.drawStock)
+            validMoves.append(.drawStock(drawMode: config.drawMode))
         }
 
         // Reset the entire waste into the stock
@@ -496,8 +592,46 @@ extension SolitaireGame: Copyable {
 // MARK: Load & Save
 extension SolitaireGame {
     static let pileSeperator: UInt8 = 0xFF
+    public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth) / 8
+
+    public static func saveGame(game: SolitaireGame) -> [UInt8] {
+        var saveData: [UInt8] = []
+
+        for index in GamePileIndex.allCases {
+            let pile = game.pile(at: index)
+            let cards: [UInt8] = pile.getCards().map({ $0.data() })
+            saveData.append(contentsOf: cards)
+            saveData.append(SolitaireGame.pileSeperator)
+        }
+
+        // Save game header
+        let versionByte: DataVersionInteger = 1
+        let scoreBytes = game.score.bigEndianBytes
+        let moveBytes = game.moves.bigEndianBytes
+        let restockBytes = game.restocks.bigEndianBytes
+
+        // Insert header in reverse
+        saveData.insert(contentsOf: restockBytes, at: 0)
+        saveData.insert(contentsOf: moveBytes, at: 0)
+        saveData.insert(contentsOf: scoreBytes, at: 0)
+        saveData.insert(versionByte, at: 0)
+
+        print("Header Size \(headerSize) \(restockBytes.count + moveBytes.count + scoreBytes.count + 1)")
+
+        return saveData
+    }
 
     public static func loadGame(from data: [UInt8]) -> SolitaireGame {
+        // Get header data
+        let headerData: [UInt8] = Array(data[0..<headerSize])
+
+        let score: ScoreInteger = ScoreInteger(from: Array(headerData[1...2]))
+        let moves: MoveInteger = MoveInteger(from: Array(headerData[3...4]))
+        let restocks = RestockInteger(from: Array(headerData[5...6]))
+
+        // Mutate data to remove header
+        let data = Array(data.dropFirst(headerSize))
+
         var separatedData: [[UInt8]] = []
         var currentData: [UInt8] = []
 
@@ -528,20 +662,17 @@ extension SolitaireGame {
             piles.append(Pile(id: index, cards: cards))
         }
 
-        return SolitaireGame(piles: piles)
+        let game = SolitaireGame(piles: piles)
+        game.score = score
+        game.moves = moves
+        game.restocks = restocks
+
+        return game
     }
 
-    public static func saveGame(game: SolitaireGame) -> [UInt8] {
-        var saveData: [UInt8] = []
+    public static func gameNumber(game: SolitaireGame) -> Int {
 
-        for index in GamePileIndex.allCases {
-            let pile = game.pile(at: index)
-            let cards: [UInt8] = pile.getCards().map({ $0.data() })
-            saveData.append(contentsOf: cards)
-            saveData.append(SolitaireGame.pileSeperator)
-        }
-
-        return saveData
+        return 0
     }
 }
 
@@ -570,11 +701,11 @@ extension SolitaireGame {
     }
 
     public static func saveCompressedGame(game: SolitaireGame) -> String {
-        let uncompressedStringRep: [[String]] = saveGame(game: game)
+        let uncompressedStringRep: [[String]] = saveGameToString(game: game)
         return compressSaveGame(stringRep: uncompressedStringRep)
     }
 
-    public static func saveGame(game: SolitaireGame) -> [[String]] {
+    public static func saveGameToString(game: SolitaireGame) -> [[String]] {
         var stringRep: [[String]] = []
 
         for index in GamePileIndex.allCases {
@@ -599,3 +730,9 @@ extension SolitaireGame {
     }
 }
 #endif
+
+extension SolitaireGame: Equatable {
+    public static func ==(lhs: SolitaireGame, rhs: SolitaireGame) -> Bool {
+        return lhs.piles == rhs.piles && lhs.score == rhs.score && lhs.restocks == rhs.restocks && lhs.moves == rhs.moves
+    }
+}

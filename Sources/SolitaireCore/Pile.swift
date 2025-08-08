@@ -25,6 +25,11 @@ public final class Pile: Identifiable, CustomStringConvertible {
             self.id == .foundationFour
         )
     }
+    
+    public var isColumn: Bool {
+        return id <= GamePileIndex.columnSeven && id >= GamePileIndex.columnOne
+    }
+
 
     public init(id: GamePileIndex, cards: [PlayingCard]) {
         self.id = id
