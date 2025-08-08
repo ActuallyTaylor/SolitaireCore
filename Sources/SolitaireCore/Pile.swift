@@ -6,7 +6,7 @@
 //
 
 public final class Pile: Identifiable, CustomStringConvertible {
-    public private(set) var id: GamePileIndex
+    public let id: GamePileIndex
     package var cards: [PlayingCard]
 
     public var description: String {

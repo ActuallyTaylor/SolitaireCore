@@ -6,9 +6,9 @@
 //
 
 enum UndoPackage {
-    case moveCards(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex, scoreChange: ScoreInteger)
-    case drawStock(cards: [PlayingCard], scoreChange: ScoreInteger)
-    case restock
+    case moveCards(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex, scoreChange: ScoreInteger, negativeScoreChange: Bool)
+    case drawStock(cards: [PlayingCard])
+    case restock(scoreChange: ScoreInteger)
 }
 
 public enum UndoError: Error {
@@ -45,16 +45,16 @@ class SolitaireUndoManager {
     
     private func undoPackage(package: UndoPackage) throws(UndoError) {
         switch package {
-        case .moveCards(let cards, let source, let destination, let scoreChange):
-            undoMoveCardPackage(cards: cards, source: source, destination: destination, scoreChange: scoreChange)
-        case .drawStock(let cards, let scoreChange):
-            try undoStockPackage(cards: cards, scoreChange: scoreChange)
-        case .restock:
-            try undoRestockPackage(package: package)
+        case .moveCards(let cards, let source, let destination, let scoreChange, let negativeScoreChange):
+            undoMoveCardPackage(cards: cards, source: source, destination: destination, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange)
+        case .drawStock(let cards):
+            try undoStockPackage(cards: cards)
+        case .restock(let scoreChange):
+            try undoRestockPackage(scoreChange: scoreChange)
         }
     }
     
-    private func undoMoveCardPackage(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex, scoreChange: ScoreInteger) {
+    private func undoMoveCardPackage(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex, scoreChange: ScoreInteger, negativeScoreChange: Bool) {
         guard let sourcePile = target?.pile(at: source) else { return }
         guard let destinationPile = target?.pile(at: destination) else { return }
         
@@ -62,25 +62,29 @@ class SolitaireUndoManager {
         destinationPile.remove(cards: cards)
         sourcePile.add(cards: cards)
 
-        target?.subtractScore(value: scoreChange)
+        if negativeScoreChange {
+            target?.addScore(value: scoreChange)
+        } else {
+            target?.subtractScore(value: scoreChange)
+        }
     }
     
-    private func undoStockPackage(cards: [PlayingCard], scoreChange: ScoreInteger) throws(UndoError) {
+    private func undoStockPackage(cards: [PlayingCard]) throws(UndoError) {
         guard let target else { throw UndoError.stackEmpty }
         // Access the waste and stock directly. Not the best but it reduces the data size for the UndoPackage
         target.stock().add(cards: cards)
         target.waste().remove(cards: cards)
         
-        target.subtractScore(value: scoreChange)
+        target.subtractMoves(value: MoveInteger(cards.count))
     }
     
-    private func undoRestockPackage(package: UndoPackage) throws(UndoError) {
+    private func undoRestockPackage(scoreChange: ScoreInteger) throws(UndoError) {
         guard let target else { throw UndoError.stackEmpty }
         
         target.swapPiles(target.waste(), target.stock())
         target.waste().cards.forEach({$0.isVisible = true})
         target.waste().reverse()
         target.subtractRestocks(value: 1)
-        target.subtractScore(value: 1)
+        target.addScore(value: scoreChange) // Restocks are always negative so add it back
     }
 }

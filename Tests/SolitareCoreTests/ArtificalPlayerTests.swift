@@ -37,7 +37,7 @@
          let player = ArtificialPlayer(game: game)
 
          let nextMove = player.nextMove()
-         print(nextMove)
+//         print(nextMove)
          
 //         player.allValidMoves()
      }

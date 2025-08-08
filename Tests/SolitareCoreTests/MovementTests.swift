@@ -32,7 +32,7 @@ struct MovementTests {
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
         
-        let cardToMove = columnTwo.getCards().first!
+        let cardToMove = columnTwo.top()!
         
         #expect(game.move(.regular(card: cardToMove, sourcePile: columnTwo, destinationPile: columnOne)))
     }
@@ -47,7 +47,7 @@ struct MovementTests {
         let foundationOne = game.piles[GamePileIndex.foundationOne.rawValue]
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         
-        let cardToMove = columnOne.getCards().first!
+        let cardToMove = columnOne.top()!
         
         #expect(!game.move(.regular(card: cardToMove, sourcePile: columnOne, destinationPile: foundationOne)))
     }
@@ -63,9 +63,9 @@ struct MovementTests {
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
         
-        let threeOfHearts = columnOne.getCards().first!
+        let bottomCard = columnOne.bottom()!
         
-        #expect(game.move(.regular(card: threeOfHearts, sourcePile: columnOne, destinationPile: columnTwo)))
+        #expect(game.move(.regular(card: bottomCard, sourcePile: columnOne, destinationPile: columnTwo)))
         #expect(columnTwo.getCards().count == 3)
     }
 
@@ -80,9 +80,12 @@ struct MovementTests {
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
         
-        let threeOfHearts = columnOne.getCards().first!
+        let columnOneOriginalCardCount = columnOne.cards.count
         
-        #expect(!game.move(.regular(card: threeOfHearts, sourcePile: columnOne, destinationPile: columnTwo)))
+        let bottomCard = columnOne.bottom()!
+        
+        #expect(!game.move(.regular(card: bottomCard, sourcePile: columnOne, destinationPile: columnTwo)))
+        #expect(columnOne.getCards().count == columnOneOriginalCardCount)
     }
     
     @Test("Test picking up cards", arguments: [
@@ -93,15 +96,15 @@ struct MovementTests {
         let game = SolitaireGame.loadGame(from: gameRep)
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         
-        let twoOfSpades = columnOne.getCards().last!
-        twoOfSpades.isVisible = true
+        let topCard = columnOne.top()!
+        topCard.isVisible = true
         
-        #expect(game.canSelectCardInPile(card: twoOfSpades, pile: columnOne))
+        #expect(game.canSelectCardInPile(card: topCard, pile: columnOne))
         
-        let threeOfHearts = columnOne.getCards().first!
-        threeOfHearts.isVisible = true
+        let bottomCard = columnOne.bottom()!
+        bottomCard.isVisible = true
 
-        #expect(game.canSelectCardInPile(card: threeOfHearts, pile: columnOne))
+        #expect(game.canSelectCardInPile(card: bottomCard, pile: columnOne))
     }
     
     @Test("Test picking up cards fails because it is picking up an invisible card", arguments: [
@@ -112,15 +115,15 @@ struct MovementTests {
         let game = SolitaireGame.loadGame(from: gameRep)
         let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
         
-        let twoOfSpades = columnOne.getCards().last!
-        twoOfSpades.isVisible = true
+        let topCard = columnOne.top()!
+        topCard.isVisible = true
         
-        #expect(game.canSelectCardInPile(card: twoOfSpades, pile: columnOne))
+        #expect(game.canSelectCardInPile(card: topCard, pile: columnOne))
         
-        let threeOfHearts = columnOne.getCards().first!
-        threeOfHearts.isVisible = false
+        let bottomCard = columnOne.bottom()!
+        bottomCard.isVisible = false
 
-        #expect(!game.canSelectCardInPile(card: threeOfHearts, pile: columnOne))
+        #expect(!game.canSelectCardInPile(card: bottomCard, pile: columnOne))
     }
 
     @Test("Test draw from stock", arguments: [
@@ -160,7 +163,7 @@ struct MovementTests {
         #expect(stock.getCards() == originalWasteCards.reversed())
     }
 
-    @Test("Test draw fromnstock shortcut function")
+    @Test("Test draw from stock shortcut function")
     func testDrawFromStockShortcutFunction() {
         let gameRep: [[String]] = [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []]
         let game = SolitaireGame.loadGame(from: gameRep)

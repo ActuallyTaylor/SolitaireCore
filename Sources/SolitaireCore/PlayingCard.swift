@@ -6,8 +6,8 @@
 //
 
 public final class PlayingCard: CustomStringConvertible {
-    public internal(set) var suit: Suit
-    public internal(set) var rank: Rank
+    public let suit: Suit
+    public let rank: Rank
 
     public internal(set) var pile: Pile?
     public internal(set) var isVisible: Bool = false

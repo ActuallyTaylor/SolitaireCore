@@ -5,7 +5,7 @@
 //  Created by Taylor Lineman on 4/16/25.
 //
 
-public enum Suit: UInt8, CaseIterable, Hashable {
+public enum Suit: UInt8, CaseIterable, Hashable, Sendable {
     public enum SuitColor {
         case red
         case black

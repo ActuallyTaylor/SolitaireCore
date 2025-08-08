@@ -5,7 +5,7 @@
 //  Created by Taylor Lineman on 4/16/25.
 //
 
-public enum Rank: UInt8, CaseIterable, Hashable, Comparable {
+public enum Rank: UInt8, CaseIterable, Hashable, Comparable, Sendable {
     case ace
     case two
     case three

@@ -19,7 +19,7 @@ struct TestSafeOperations {
         int.safeSubtract(value: config.subtract)
     }
     
-    @Test("Test overflow adddition", arguments: [
+    @Test("Test overflow addition", arguments: [
         (value: (UInt16.max - 1), add: UInt16(20)) // The compiler complains because the 20 doesn't have a type
     ])
     func testAddition(config: (value: UInt16, add: UInt16)) {

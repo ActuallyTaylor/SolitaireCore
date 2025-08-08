@@ -19,7 +19,7 @@ public typealias MoveInteger = UInt16
 public typealias DataVersionInteger = UInt8
 
 // TODO: Add tests for three draw mode
-public enum DrawMode: UInt8 {
+public enum DrawMode: UInt8, Sendable {
     case one
     case three
 }
@@ -42,19 +42,13 @@ public final class SolitaireGame {
     #if PROFILE
     private let signposter = OSSignposter()
     #endif
+    
+    private let scoreKeeper: ScoreKeeper = ScoreKeeper()
 
     public static let totalCards = 52
     public static let totalPiles = 13
     public let numberOfColumns = 7
     public let numberOfFoundationSlots = 4
-
-    // Used to track what moves into the foundation have been scored, and not re-score them
-    private var highestScoredFoundationRank: [GamePileIndex: Rank?] = [
-        .foundationOne: .none,
-        .foundationTwo: .none,
-        .foundationThree: .none,
-        .foundationFour: .none
-    ]
 
     public private(set) var restocks: RestockInteger = 0
     public private(set) var moves: MoveInteger = 0
@@ -68,6 +62,7 @@ public final class SolitaireGame {
 
     public var piles: [Pile] = []
     public private(set) var seed: UInt64
+    
 
     internal init(piles: [Pile]) {
         self.seed = SolitaireGame.generateSeed()
@@ -325,82 +320,32 @@ extension SolitaireGame {
 
         destination.add(cards: cardsToMove)
 
+        let integerScoreChange: Int = scoreKeeper.scoreRegularMove(card: card, source: pile, destination: destination, cardIndex: index)
+       
         var scoreChange: ScoreInteger = 0
+        var negativeScoreChange = false
+        if integerScoreChange >= 0 {
+            // Add the value to the score
+            scoreChange = UInt16(integerScoreChange)
+            negativeScoreChange = false
+            
+            addScore(value: scoreChange)
+        } else {
+            // Subtract the value from the score. Take the negative of the integer score to make it positive
+            scoreChange = UInt16(-integerScoreChange)
+            negativeScoreChange = true
 
-        // Make the card above the moved card visible
-        if index >= 1 {
-            if !pile.cards[index - 1].isVisible {
-                scoreChange += ScoreEvent.uncoverCard.scoreChange
-                pile.cards[index - 1].isVisible = true
-            }
+            subtractScore(value: scoreChange)
         }
         
-        // Card is being moved out of the waste into a non-foundation pile
-        if pile.id == .waste && !destination.isFoundation {
-            scoreChange += ScoreEvent.moveFromWaste.scoreChange
-        }
+        addMoves(value: 1)
 
-        if !pile.isFoundation && destination.isFoundation, let scoredFoundation = highestScoredFoundationRank[destination.id] {
-            if let rank = scoredFoundation {
-                if card.rank > rank {
-                    // Last scored rank, is less than the card's rank so score it
-                    scoreChange += ScoreEvent.moveToFoundation.scoreChange
-                }
-            } else {
-                // Last rank was un-scored so score it, the rank will be set right after this
-                scoreChange += ScoreEvent.moveToFoundation.scoreChange
-            }
-
-            highestScoredFoundationRank[destination.id] = card.rank
-        }
-        
-        if pile.isColumn && destination.isColumn {
-            scoreChange += ScoreEvent.moveToAnotherPile.scoreChange
-        }
-
-        score += scoreChange
-        moves += 1
-
-        undoManager.registerUndo(package: .moveCards(cards: originalCardsToMove, source: pile.id, destination: destination.id, scoreChange: scoreChange))
+        undoManager.registerUndo(package: .moveCards(cards: originalCardsToMove, source: pile.id, destination: destination.id, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange))
 
         return true
-    }
-
-    private func isValidCardRun(below index: Int, in pile: Pile) -> Bool {
-        var lastCard: PlayingCard = pile.cards[index]
-
-        for i in (index + 1)..<pile.cards.count {
-            guard lastCard.isInSequence(pile.cards[i]) && lastCard.isOppositeColor(pile.cards[i]) else { return false }
-            lastCard = pile.cards[i]
-        }
-
-        return true
-    }
-
-    private func isValidMove(_ card: PlayingCard, to destination: Pile) -> Bool {
-        if destination.isEmpty {
-            // If the destination is empty, only allow an ace in a foundation pile, and a king in any other pile
-            if destination.isFoundation {
-                return card.rank == .ace
-            } else if card.rank == .king {
-                return true
-            }
-        } else if let topCard = destination.top() {
-            // If the destination is the foundation, only drop if the card is less than the new card & of the same color & of the same suit
-            if destination.isFoundation {
-                return topCard.isLessThan(card) && card.isInSequence(topCard) && topCard.isSameColor(card) && topCard.isSameSuitAs(card)
-            }
-
-            // Only allow a drop if the card is in sequence with the top card and they are different colors
-            return topCard.isInSequence(card) && topCard.isOppositeColor(card)
-        }
-
-        return false
     }
 
     private func drawStock(mode: DrawMode) -> Bool {
-        let numberOfMoves: UInt16 = (mode == .one ? 1 : 3)
-
         var originalCards: [PlayingCard] = []
         for x in 0..<(mode == .one ? 1 : 3) {
             guard let topOfStock = stock().pop() else {
@@ -417,10 +362,10 @@ extension SolitaireGame {
             waste().add(card: topOfStock)
             topOfStock.isVisible = true
 
-            moves += 1
+            addMoves(value: 1)
         }
         
-        undoManager.registerUndo(package: .drawStock(cards: originalCards, scoreChange: numberOfMoves))
+        undoManager.registerUndo(package: .drawStock(cards: originalCards))
 
         return true
     }
@@ -431,23 +376,15 @@ extension SolitaireGame {
         waste().reverse()
         waste().cards.forEach({$0.isVisible = false})
         swapPiles(waste(), stock())
-        restocks += 1
+        addRestocks(value: 1)
 
         // Score restock
-        let penalty: UInt16 =  switch config.drawMode {
-        case .one:
-            // In draw one, subtract score after one pass through the stock
-            restocks > 1 ? ScoreEvent.restockDrawOne.scoreChange : 0
-        case .three:
-            // In draw three, subtract score after four passes through the stock
-            restocks > 4 ? ScoreEvent.restockDrawThree.scoreChange : 0
-        }
-        
+        let penalty: UInt16 = scoreKeeper.scoreRestock(restocks: restocks, drawMode: config.drawMode)
         score.safeSubtract(value: penalty)
 
-        moves += 1
+        addMoves(value: 1)
 
-        undoManager.registerUndo(package: .restock)
+        undoManager.registerUndo(package: .restock(scoreChange: penalty))
 
         return true
     }
@@ -488,7 +425,7 @@ extension SolitaireGame {
     }
 }
 
-// MARK: Invalid Moves
+// MARK: Move validation
 extension SolitaireGame {
     // TODO: This SHOULD NOT call validMoves. That value should be cached
     public func getNumberOfValidMoves() -> Int {
@@ -579,7 +516,38 @@ extension SolitaireGame {
 
         return validMoves
     }
+    
+    private func isValidCardRun(below index: Int, in pile: Pile) -> Bool {
+        var lastCard: PlayingCard = pile.cards[index]
 
+        for i in (index + 1)..<pile.cards.count {
+            guard lastCard.isInSequence(pile.cards[i]) && lastCard.isOppositeColor(pile.cards[i]) else { return false }
+            lastCard = pile.cards[i]
+        }
+
+        return true
+    }
+
+    private func isValidMove(_ card: PlayingCard, to destination: Pile) -> Bool {
+        if destination.isEmpty {
+            // If the destination is empty, only allow an ace in a foundation pile, and a king in any other pile
+            if destination.isFoundation {
+                return card.rank == .ace
+            } else if card.rank == .king {
+                return true
+            }
+        } else if let topCard = destination.top() {
+            // If the destination is the foundation, only drop if the card is less than the new card & of the same color & of the same suit
+            if destination.isFoundation {
+                return topCard.isLessThan(card) && card.isInSequence(topCard) && topCard.isSameColor(card) && topCard.isSameSuitAs(card)
+            }
+
+            // Only allow a drop if the card is in sequence with the top card and they are different colors
+            return topCard.isInSequence(card) && topCard.isOppositeColor(card)
+        }
+
+        return false
+    }
 }
 
 extension SolitaireGame: Copyable {
@@ -591,7 +559,7 @@ extension SolitaireGame: Copyable {
 
 // MARK: Load & Save
 extension SolitaireGame {
-    static let pileSeperator: UInt8 = 0xFF
+    static let pileSeparator: UInt8 = 0xFF
     public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth) / 8
 
     public static func saveGame(game: SolitaireGame) -> [UInt8] {
@@ -601,7 +569,7 @@ extension SolitaireGame {
             let pile = game.pile(at: index)
             let cards: [UInt8] = pile.getCards().map({ $0.data() })
             saveData.append(contentsOf: cards)
-            saveData.append(SolitaireGame.pileSeperator)
+            saveData.append(SolitaireGame.pileSeparator)
         }
 
         // Save game header
@@ -636,7 +604,7 @@ extension SolitaireGame {
         var currentData: [UInt8] = []
 
         for byte in data {
-            if byte == Self.pileSeperator {
+            if byte == Self.pileSeparator {
                 separatedData.append(currentData)
                 currentData = []
             } else {
@@ -671,7 +639,6 @@ extension SolitaireGame {
     }
 
     public static func gameNumber(game: SolitaireGame) -> Int {
-
         return 0
     }
 }
@@ -679,11 +646,6 @@ extension SolitaireGame {
 #if !hasFeature(Embedded)
 // MARK: Embedded swift does not support strings without extra packages, so disable string based loading
 extension SolitaireGame {
-    public static func loadCompressedGame(from string: String) -> SolitaireGame {
-        let uncompressedStringRep = uncompressSaveGame(string: string)
-        return loadGame(from: uncompressedStringRep)
-    }
-
     public static func loadGame(from stringRep: [[String]]) -> SolitaireGame {
         var piles: [Pile] = []
 
@@ -700,11 +662,6 @@ extension SolitaireGame {
         return SolitaireGame(piles: piles)
     }
 
-    public static func saveCompressedGame(game: SolitaireGame) -> String {
-        let uncompressedStringRep: [[String]] = saveGameToString(game: game)
-        return compressSaveGame(stringRep: uncompressedStringRep)
-    }
-
     public static func saveGameToString(game: SolitaireGame) -> [[String]] {
         var stringRep: [[String]] = []
 
@@ -715,18 +672,6 @@ extension SolitaireGame {
         }
 
         return stringRep
-    }
-
-    public static func compressSaveGame(stringRep: [[String]]) -> String {
-        return stringRep.compactMap { strings in
-            return strings.joined(separator: ",")
-        }.joined(separator: ";")
-    }
-
-    public static func uncompressSaveGame(string: String) -> [[String]] {
-        let rows = string.split(separator: ";").map({String($0)})
-        let uncompressedRows = rows.compactMap({$0.split(separator: ",").map({String($0)})})
-        return uncompressedRows
     }
 }
 #endif

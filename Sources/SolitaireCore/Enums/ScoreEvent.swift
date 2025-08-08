@@ -7,17 +7,15 @@
 
 enum ScoreEvent {
     case uncoverCard
+    case moveToAnotherPile
+
     case moveFromWaste
     
     case moveToFoundation
-    
+    case moveAwayFromFoundation
+
     case restockDrawThree
     case restockDrawOne
-
-    case moveToAnotherPile
-    
-    case tenSecondPenalty
-    case moveAwayFromFoundation
 
     var scoreChange: UInt16 {
         switch self {
@@ -33,19 +31,8 @@ enum ScoreEvent {
             100
         case .moveToAnotherPile:
             3
-        case .tenSecondPenalty:
-            10
         case .moveAwayFromFoundation:
             15
-        }
-    }
-    
-    var subtract: Bool {
-        switch self {
-        case .uncoverCard, .moveToFoundation, .moveToAnotherPile, .moveAwayFromFoundation, .moveFromWaste:
-            return false
-        case .restockDrawOne, .restockDrawThree, .tenSecondPenalty:
-            return true
         }
     }
 }

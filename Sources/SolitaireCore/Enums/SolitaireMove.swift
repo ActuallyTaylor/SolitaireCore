@@ -11,3 +11,7 @@ public enum SolitaireMove {
     case drawStock(drawMode: DrawMode)
     case none
 }
+
+//extension SolitaireMove: Sendable {
+//    
+//}

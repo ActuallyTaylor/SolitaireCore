@@ -5,7 +5,7 @@
 //  Created by Taylor Lineman on 4/15/25.
 //
 
-public enum GamePileIndex: Int, CaseIterable {
+public enum GamePileIndex: Int, CaseIterable, Sendable {
     case stock
     case waste
     case foundationOne
