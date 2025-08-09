@@ -16,9 +16,10 @@ public final class PlayingCard: CustomStringConvertible {
     public var description: String { "\(rank.description)\(suit.description)" }
     public var spelledDescription: String { "\(rank.spelled) of \(suit.spelled)" }
 
-    public init(suit: Suit, rank: Rank) {
+    public init(suit: Suit, rank: Rank, visible: Bool = false) {
         self.suit = suit
         self.rank = rank
+        self.isVisible = visible
     }
 
     /*
