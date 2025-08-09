@@ -322,7 +322,10 @@ extension SolitaireGame {
     private func moveCard(card: PlayingCard, from pile: Pile, to destination: Pile) -> Bool {
         guard isValidMove(card, to: destination) else { return false }
         guard let index = pile.cards.firstIndex(of: card) else { return false }
-        if destination.isFoundation {
+        if pile.isFoundation && destination.isFoundation {
+            // Let you move foundation cards around
+            guard destination.isEmpty else { return false }
+        } else if destination.isFoundation {
             guard isValidCardFoundationRun(below: index, in: pile) else { return false }
         } else {
             guard isValidCardRun(below: index, in: pile) else { return false }
