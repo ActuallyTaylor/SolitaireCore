@@ -13,7 +13,8 @@ public final class PlayingCard: CustomStringConvertible {
     public internal(set) var isVisible: Bool = false
 
     public var color: Suit.SuitColor { suit.color }
-    public var description: String { rank.description + suit.description }
+    public var description: String { "\(rank.description)\(suit.description)" }
+    public var spelledDescription: String { "\(rank.spelled) of \(suit.spelled)" }
 
     public init(suit: Suit, rank: Rank) {
         self.suit = suit

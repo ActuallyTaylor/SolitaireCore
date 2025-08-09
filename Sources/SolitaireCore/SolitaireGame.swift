@@ -42,7 +42,7 @@ public final class SolitaireGame {
     #if PROFILE
     private let signposter = OSSignposter()
     #endif
-    
+
     private var scoreKeeper: ScoreKeeper = ScoreKeeper()
 
     public static let totalCards = 52
@@ -62,7 +62,7 @@ public final class SolitaireGame {
 
     public var piles: [Pile] = []
     public private(set) var seed: UInt64
-    
+
 
     internal init(piles: [Pile]) {
         self.seed = SolitaireGame.generateSeed()
@@ -270,27 +270,13 @@ extension SolitaireGame {
 extension SolitaireGame {
     public func drawFromStock() {
         let result = move(.drawStock(drawMode: config.drawMode))
-        
+
         // Check to see if we could draw a card, if not put the waste back into the stock
         if !result {
             move(.reStock)
         }
     }
 
-    public func canSelectCardInPile(card: PlayingCard, pile: Pile) -> Bool {
-        var lastCard: PlayingCard = card
-        guard let cardIndex = pile.cards.firstIndex(of: card) else { return false }
-
-        for i in (cardIndex + 1)..<pile.cards.count {
-            guard lastCard.isInSequence(pile.cards[i]) else { return false }
-            guard lastCard.isOppositeColor(pile.cards[i]) else { return false }
-            guard lastCard.isVisible else { return false }
-            lastCard = pile.cards[i]
-        }
-
-        return true
-    }
-    
     private func reInterpretAiMove(_ move: SolitaireMove) -> SolitaireMove? {
         switch move {
         case .regular(let card, let sourcePile, let destinationPile):
@@ -299,7 +285,7 @@ extension SolitaireGame {
             guard let localCard = localSource.cards.first(where: { $0.rank == card.rank && $0.suit == card.suit }) else {
                 return nil
             }
-            
+
             return .regular(card: localCard, sourcePile: localSource, destinationPile: localDestination)
         case .reStock, .drawStock, .none:
             return move
@@ -313,7 +299,7 @@ extension SolitaireGame {
         }
         return self.move(reinterpretedMove)
     }
-    
+
     @discardableResult
     public func move(_ move: SolitaireMove) -> Bool {
         defer {
@@ -341,7 +327,7 @@ extension SolitaireGame {
         } else {
             guard isValidCardRun(below: index, in: pile) else { return false }
         }
-        
+
         let runLength = pile.cards.count - index
         let cardsToMove = pile.pop(count: runLength)
         let originalCardsToMove = cardsToMove.map({$0.copy()})
@@ -349,14 +335,14 @@ extension SolitaireGame {
         destination.add(cards: cardsToMove)
 
         let integerScoreChange: Int = scoreKeeper.scoreRegularMove(card: card, source: pile, destination: destination, cardIndex: index)
-       
+
         var scoreChange: ScoreInteger = 0
         var negativeScoreChange = false
         if integerScoreChange >= 0 {
             // Add the value to the score
             scoreChange = UInt16(integerScoreChange)
             negativeScoreChange = false
-            
+
             addScore(value: scoreChange)
         } else {
             // Subtract the value from the score. Take the negative of the integer score to make it positive
@@ -365,7 +351,7 @@ extension SolitaireGame {
 
             subtractScore(value: scoreChange)
         }
-        
+
         addMoves(value: 1)
 
         undoManager.registerUndo(package: .moveCards(cards: originalCardsToMove, source: pile.id, destination: destination.id, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange))
@@ -384,7 +370,7 @@ extension SolitaireGame {
                     continue
                 }
             }
-            
+
             let originalCardState = topOfStock.copy()
             originalCards.append(originalCardState)
             waste().add(card: topOfStock)
@@ -392,7 +378,7 @@ extension SolitaireGame {
 
             addMoves(value: 1)
         }
-        
+
         undoManager.registerUndo(package: .drawStock(cards: originalCards))
 
         return true
@@ -544,7 +530,7 @@ extension SolitaireGame {
 
         return validMoves
     }
-    
+
     private func isValidCardRun(below index: Int, in pile: Pile) -> Bool {
         var lastCard: PlayingCard = pile.cards[index]
 
@@ -555,7 +541,7 @@ extension SolitaireGame {
 
         return true
     }
-    
+
     private func isValidCardFoundationRun(below index: Int, in pile: Pile) -> Bool {
         var lastCard: PlayingCard = pile.cards[index]
 
@@ -587,6 +573,31 @@ extension SolitaireGame {
         }
 
         return false
+    }
+}
+
+// MARK: Selection
+extension SolitaireGame {
+    public func canAddCardToSelectionStack(card: PlayingCard, selectedCards: [PlayingCard], pickUpFrom pile: Pile) -> Bool {
+        if let lastCard = selectedCards.last {
+            return card.isInSequence(lastCard) && card.isOppositeColor(lastCard)
+        }
+
+        return canSelectCardInPile(card: card, pile: pile)
+    }
+
+    public func canSelectCardInPile(card: PlayingCard, pile: Pile) -> Bool {
+        var lastCard: PlayingCard = card
+        guard let cardIndex = pile.cards.firstIndex(of: card) else { return false }
+
+        for i in (cardIndex + 1)..<pile.cards.count {
+            guard lastCard.isInSequence(pile.cards[i]) else { return false }
+            guard lastCard.isOppositeColor(pile.cards[i]) else { return false }
+            guard lastCard.isVisible else { return false }
+            lastCard = pile.cards[i]
+        }
+
+        return true
     }
 }
 

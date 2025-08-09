@@ -58,7 +58,10 @@ class SolitaireUndoManager {
         guard let sourcePile = target?.pile(at: source) else { return }
         guard let destinationPile = target?.pile(at: destination) else { return }
         
-        sourcePile.top()?.isVisible = false
+        // If the card above the top card is visible, we do not want to set the visibility to false.
+        if !(sourcePile.cardFromTop(offset: 2)?.isVisible ?? false) {
+            sourcePile.top()?.isVisible = false
+        }
         destinationPile.remove(cards: cards)
         sourcePile.add(cards: cards)
 
