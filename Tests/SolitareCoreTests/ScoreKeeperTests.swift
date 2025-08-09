@@ -75,7 +75,12 @@ struct ScoreKeeperTests {
         [[], [], [], [], [], [], ["A♥"], [], [], [], [], [], []],
         // Move the two of hearts to the foundation, on top of an ace of hearts
         [[], [], ["A♥"], [], [], [], ["2♥"], [], [], [], [], [], []],
-
+        
+        // Score complete stacks
+        [[], [], ["A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠"], [], [], [], ["K♠"], [], [], [], [], [], []],
+        [[], [], ["A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦"], [], [], [], ["K♦"], [], [], [], [], [], []],
+        [[], [], ["A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣"], [], [], [], ["K♣"], [], [], [], [], [], []],
+        [[], [], ["A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥"], [], [], [], ["K♥"], [], [], [], [], [], []],
     ])
     func testMoveToFoundation(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -93,6 +98,37 @@ struct ScoreKeeperTests {
         
         #expect(scoreChange == ScoreEvent.moveToFoundation.scoreChange)
     }
+    
+    @Test("Test scoring a move to foundation scoring", arguments: [
+        // Move the ace of hearts to the foundation
+        [[], [], [], [], [], [], ["A♥"], [], [], [], [], [], []],
+        // Move the two of hearts to the foundation, on top of an ace of hearts
+        [[], [], ["A♥"], [], [], [], ["2♥"], [], [], [], [], [], []],
+        
+        // Score complete stacks
+        [[], [], ["A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠"], [], [], [], ["K♠"], [], [], [], [], [], []],
+        [[], [], ["A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦"], [], [], [], ["K♦"], [], [], [], [], [], []],
+        [[], [], ["A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣"], [], [], [], ["K♣"], [], [], [], [], [], []],
+        [[], [], ["A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥"], [], [], [], ["K♥"], [], [], [], [], [], []],
+    ])
+    func testFoundationMaxCardScoring(gameRep: [[String]]) {
+        let game = SolitaireGame.loadGame(from: gameRep)
+        let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
+        let foundationOne = game.piles[GamePileIndex.foundationOne.rawValue]
+        
+        // Make sure the foundation cards are visible, since they will be in a real game
+        foundationOne.cards.forEach({ $0.isVisible = true })
+        
+        let cardToMove = columnOne.top()!
+        let index = columnOne.cards.firstIndex(of: cardToMove) ?? 0
+
+        let scoreKeeper = ScoreKeeper()
+        let scoreChange = scoreKeeper.scoreRegularMove(card: cardToMove, source: columnOne, destination: foundationOne, cardIndex: index)
+        
+        #expect(scoreChange == ScoreEvent.moveToFoundation.scoreChange)
+    }
+
+
 
     @Test("Test scoring a move out of foundation", arguments: [
         // Move three of hearts out of foundation to column one
@@ -145,8 +181,6 @@ struct ScoreKeeperTests {
         
         #expect(game.score == initialScore - ScoreEvent.moveAwayFromFoundation.scoreChange)
     }
-
-
     
     @Test("Test scoring a draw one restock")
     func testRestockDrawOne() {

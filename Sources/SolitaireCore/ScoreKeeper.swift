@@ -5,7 +5,7 @@
 //  Created by Taylor Lineman on 8/7/25.
 //
 
-class ScoreKeeper {
+final class ScoreKeeper {
     // Used to track what moves into the foundation have been scored, and not re-score them
     private var highestScoredFoundationRank: [GamePileIndex: Rank?] = [
         .foundationOne: .none,
@@ -70,5 +70,13 @@ class ScoreKeeper {
             // In draw three, subtract score after four passes through the stock
             restocks > 4 ? ScoreEvent.restockDrawThree.scoreChange : 0
         }
+    }
+}
+
+extension ScoreKeeper: Copyable {
+    func copy() -> ScoreKeeper {
+        let keeper = ScoreKeeper()
+        keeper.highestScoredFoundationRank = self.highestScoredFoundationRank
+        return keeper
     }
 }

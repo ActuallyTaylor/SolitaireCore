@@ -72,9 +72,10 @@ class SolitaireUndoManager {
     private func undoStockPackage(cards: [PlayingCard]) throws(UndoError) {
         guard let target else { throw UndoError.stackEmpty }
         // Access the waste and stock directly. Not the best but it reduces the data size for the UndoPackage
-        target.stock().add(cards: cards)
         target.waste().remove(cards: cards)
-        
+        target.stock().add(cards: cards)
+        cards.forEach({$0.isVisible = false })
+
         target.subtractMoves(value: MoveInteger(cards.count))
     }
     

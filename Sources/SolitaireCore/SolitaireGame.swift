@@ -36,14 +36,14 @@ public final class SolitaireGame {
     internal let config: GameConfiguration = .init(
         canMoveFromWasteToFoundation: true,
         undoAddsMove: true,
-        drawMode: .three
+        drawMode: .one
     )
 
     #if PROFILE
     private let signposter = OSSignposter()
     #endif
     
-    private let scoreKeeper: ScoreKeeper = ScoreKeeper()
+    private var scoreKeeper: ScoreKeeper = ScoreKeeper()
 
     public static let totalCards = 52
     public static let totalPiles = 13
@@ -290,7 +290,30 @@ extension SolitaireGame {
 
         return true
     }
+    
+    private func reInterpretAiMove(_ move: SolitaireMove) -> SolitaireMove? {
+        switch move {
+        case .regular(let card, let sourcePile, let destinationPile):
+            let localSource = pile(at: sourcePile.id)
+            let localDestination = pile(at: destinationPile.id)
+            guard let localCard = localSource.cards.first(where: { $0.rank == card.rank && $0.suit == card.suit }) else {
+                return nil
+            }
+            
+            return .regular(card: localCard, sourcePile: localSource, destinationPile: localDestination)
+        case .reStock, .drawStock, .none:
+            return move
+        }
+    }
 
+    @discardableResult
+    public func makeAiMove(_ move: SolitaireMove) -> Bool {
+        guard let reinterpretedMove = reInterpretAiMove(move) else {
+            return false
+        }
+        return self.move(reinterpretedMove)
+    }
+    
     @discardableResult
     public func move(_ move: SolitaireMove) -> Bool {
         defer {
@@ -313,7 +336,12 @@ extension SolitaireGame {
     private func moveCard(card: PlayingCard, from pile: Pile, to destination: Pile) -> Bool {
         guard isValidMove(card, to: destination) else { return false }
         guard let index = pile.cards.firstIndex(of: card) else { return false }
-        guard isValidCardRun(below: index, in: pile) else { return false }
+        if destination.isFoundation {
+            guard isValidCardFoundationRun(below: index, in: pile) else { return false }
+        } else {
+            guard isValidCardRun(below: index, in: pile) else { return false }
+        }
+        
         let runLength = pile.cards.count - index
         let cardsToMove = pile.pop(count: runLength)
         let originalCardsToMove = cardsToMove.map({$0.copy()})
@@ -527,6 +555,18 @@ extension SolitaireGame {
 
         return true
     }
+    
+    private func isValidCardFoundationRun(below index: Int, in pile: Pile) -> Bool {
+        var lastCard: PlayingCard = pile.cards[index]
+
+        for i in (index + 1)..<pile.cards.count {
+            guard lastCard.isInSequence(pile.cards[i]) && lastCard.isSameColor(pile.cards[i]) else { return false }
+            lastCard = pile.cards[i]
+        }
+
+        return true
+    }
+
 
     private func isValidMove(_ card: PlayingCard, to destination: Pile) -> Bool {
         if destination.isEmpty {
@@ -553,7 +593,13 @@ extension SolitaireGame {
 extension SolitaireGame: Copyable {
     func copy() -> SolitaireGame {
         let piles = self.piles.map({$0.copy()})
-        return SolitaireGame(piles: piles)
+        let game = SolitaireGame(piles: piles)
+        game.score = self.score
+        game.moves = self.moves
+        game.restocks = self.restocks
+        game.seed = self.seed
+        game.scoreKeeper = self.scoreKeeper.copy()
+        return game
     }
 }
 
