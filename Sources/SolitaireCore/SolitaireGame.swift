@@ -580,7 +580,14 @@ extension SolitaireGame {
 extension SolitaireGame {
     public func canAddCardToSelectionStack(card: PlayingCard, selectedCards: [PlayingCard], pickUpFrom pile: Pile) -> Bool {
         if let lastCard = selectedCards.last {
-            return card.isInSequence(lastCard) && card.isOppositeColor(lastCard)
+            if pile.isFoundation {
+                // If it is the foundation it needs to be same color card. And it should be in reverse sequence (Card below should be less)
+                return lastCard.isInSequence(card) && card.isSameSuitAs(lastCard)
+            } else {
+                // If it is a regular pile, card should be in sequence and the opposite color.
+                return card.isInSequence(lastCard) && card.isOppositeColor(lastCard)
+            }
+
         }
 
         return canSelectCardInPile(card: card, pile: pile)
