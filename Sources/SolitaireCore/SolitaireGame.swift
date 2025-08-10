@@ -268,13 +268,15 @@ extension SolitaireGame {
 
 // MARK: Movement
 extension SolitaireGame {
-    public func drawFromStock() {
+    public func drawFromStock() -> Bool {
         let result = move(.drawStock(drawMode: config.drawMode))
 
         // Check to see if we could draw a card, if not put the waste back into the stock
         if !result {
-            move(.reStock)
+            return move(.reStock)
         }
+
+        return true
     }
 
     private func reInterpretAiMove(_ move: SolitaireMove) -> SolitaireMove? {

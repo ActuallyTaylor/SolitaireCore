@@ -172,12 +172,12 @@ struct MovementTests {
         let waste = game.piles[GamePileIndex.waste.rawValue]
 
         // First call should draw from stock -> waste
-        game.drawFromStock()
+        #expect(game.drawFromStock())
         #expect(stock.getCards().count == 0)
         #expect(waste.getCards().count == 1)
         
         // Second call should resttock
-        game.drawFromStock()
+        #expect(game.drawFromStock())
         #expect(stock.getCards().count == 1)
         #expect(waste.getCards().count == 0)
     }
