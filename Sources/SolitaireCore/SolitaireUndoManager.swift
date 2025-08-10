@@ -16,7 +16,7 @@ public enum UndoError: Error {
     case noTarget
 }
 
-class SolitaireUndoManager {
+final class SolitaireUndoManager {
     private var stack: [UndoPackage] = []
     
     var target: SolitaireGame? = nil
@@ -90,5 +90,13 @@ class SolitaireUndoManager {
         target.waste().reverse()
         target.subtractRestocks(value: 1)
         target.addScore(value: scoreChange) // Restocks are always negative so add it back
+    }
+}
+
+extension SolitaireUndoManager: Copyable {
+    func copy() -> SolitaireUndoManager {
+        let newUndoManager = SolitaireUndoManager()
+        newUndoManager.stack = stack
+        return newUndoManager
     }
 }

@@ -17,6 +17,7 @@ public typealias ScoreInteger = UInt16
 public typealias RestockInteger = UInt16
 public typealias MoveInteger = UInt16
 public typealias DataVersionInteger = UInt8
+public typealias SeedInteger = UInt64
 
 // TODO: Add tests for three draw mode
 public enum DrawMode: UInt8, Sendable {
@@ -31,8 +32,6 @@ struct GameConfiguration {
 }
 
 public final class SolitaireGame {
-    private let undoManager: SolitaireUndoManager = SolitaireUndoManager()
-
     internal let config: GameConfiguration = .init(
         canMoveFromWasteToFoundation: true,
         undoAddsMove: true,
@@ -43,7 +42,8 @@ public final class SolitaireGame {
     private let signposter = OSSignposter()
     #endif
 
-    private var scoreKeeper: ScoreKeeper = ScoreKeeper()
+    private let scoreKeeper: ScoreKeeper
+    private let undoManager: SolitaireUndoManager
 
     public static let totalCards = 52
     public static let totalPiles = 13
@@ -61,19 +61,36 @@ public final class SolitaireGame {
     public private(set) var isSolved: Bool = false
 
     public var piles: [Pile] = []
-    public private(set) var seed: UInt64
+    public private(set) var seed: SeedInteger
 
 
     internal init(piles: [Pile]) {
         self.seed = SolitaireGame.generateSeed()
+        self.undoManager = SolitaireUndoManager()
+        self.scoreKeeper = ScoreKeeper()
 
         undoManager.target = self
         self.piles = piles
+        
+        // Check if the game inputed is a solvedGame
+        self.isSolved = checkIsGameSolved()
+    }
+    
+    internal init(piles: [Pile], seed: SeedInteger, undoManager: SolitaireUndoManager, scoreKeeper: ScoreKeeper) {
+        self.seed = seed
+        self.undoManager = undoManager
+        self.scoreKeeper = scoreKeeper
+        
+        undoManager.target = self
+        self.piles = piles
+        
         // Check if the game inputed is a solvedGame
         self.isSolved = checkIsGameSolved()
     }
 
     public init() {
+        self.undoManager = SolitaireUndoManager()
+        self.scoreKeeper = ScoreKeeper()
         self.seed = SolitaireGame.generateSeed()
 
         undoManager.target = self
@@ -87,6 +104,8 @@ public final class SolitaireGame {
     /// Note: The seed may change as the version of swift changes. This is a side effect of shuffle not being a permanent implementation.
     /// - Parameter seed: The seed of the solitaire game to generate
     public init(seed: UInt64) {
+        self.undoManager = SolitaireUndoManager()
+        self.scoreKeeper = ScoreKeeper()
         self.seed = seed
 
         undoManager.target = self
@@ -97,8 +116,8 @@ public final class SolitaireGame {
     }
 
 
-    static func generateSeed() -> UInt64 {
-        return UInt64.random(in: 0..<UInt64.max)
+    static func generateSeed() -> SeedInteger {
+        return SeedInteger.random(in: 0..<SeedInteger.max)
     }
 
     // public func printPiles() {
@@ -616,12 +635,10 @@ extension SolitaireGame {
 extension SolitaireGame: Copyable {
     func copy() -> SolitaireGame {
         let piles = self.piles.map({$0.copy()})
-        let game = SolitaireGame(piles: piles)
+        let game = SolitaireGame(piles: piles, seed: seed, undoManager: undoManager.copy(), scoreKeeper: scoreKeeper.copy())
         game.score = self.score
         game.moves = self.moves
         game.restocks = self.restocks
-        game.seed = self.seed
-        game.scoreKeeper = self.scoreKeeper.copy()
         return game
     }
 }
