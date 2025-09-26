@@ -30,24 +30,24 @@ final class ScoreKeeper {
         if !source.isFoundation && destination.isFoundation, let scoredFoundation = highestScoredFoundationRank[destination.id] {
             if let rank = scoredFoundation {
                 if card.rank > rank {
-                    // Last scored rank, is less than the card's rank so score it
+                    // Last scored rank, is less than the card's rank so score it.
                     scoreChange += Int(ScoreEvent.moveToFoundation.scoreChange)
                 }
             } else {
-                // Last rank was un-scored so score it, the rank will be set right after this
+                // Last rank was un-scored so score it, the rank will be set right after this.
                 scoreChange += Int(ScoreEvent.moveToFoundation.scoreChange)
             }
 
             highestScoredFoundationRank[destination.id] = card.rank
         }
         
-        
-        // Score moving out of the waste into a non-foundation pile
+        // Score moving out of the waste into a non-foundation pile. 
+        // Waste to the foundation pile will score the same as moving a regular card into the foundation. This stops any double counting.
         if source.id == .waste && !destination.isFoundation {
             scoreChange += Int(ScoreEvent.moveFromWaste.scoreChange)
         }
         
-        // Score moving cards between columns
+        // Score moving cards between columns.
         if source.isColumn && destination.isColumn {
             scoreChange += Int(ScoreEvent.moveToAnotherPile.scoreChange)
         }
