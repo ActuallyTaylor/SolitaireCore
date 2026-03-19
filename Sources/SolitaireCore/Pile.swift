@@ -5,6 +5,13 @@
 //  Created by Taylor Lineman on 4/15/25.
 //
 
+#if !hasFeature(Embedded) && canImport(SwiftUI)
+import SwiftUI
+#endif
+
+#if !hasFeature(Embedded) && canImport(SwiftUI)
+@Observable
+#endif
 public final class Pile: Identifiable, CustomStringConvertible {
     public let id: GamePileIndex
     package var cards: [PlayingCard]

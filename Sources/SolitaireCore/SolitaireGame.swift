@@ -13,6 +13,10 @@ import os
 import Foundation
 #endif
 
+#if !hasFeature(Embedded) && canImport(SwiftUI)
+import SwiftUI
+#endif
+
 public typealias ScoreInteger = UInt16
 public typealias RestockInteger = UInt16
 public typealias MoveInteger = UInt16
@@ -31,6 +35,10 @@ struct GameConfiguration {
     let drawMode: DrawMode
 }
 
+
+#if !hasFeature(Embedded) && canImport(SwiftUI)
+@Observable
+#endif
 public final class SolitaireGame {
     internal let config: GameConfiguration = .init(
         canMoveFromWasteToFoundation: true,
@@ -62,7 +70,6 @@ public final class SolitaireGame {
 
     public var piles: [Pile] = []
     public private(set) var seed: SeedInteger
-
 
     internal init(piles: [Pile]) {
         self.seed = SolitaireGame.generateSeed()

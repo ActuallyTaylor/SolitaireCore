@@ -1,5 +1,6 @@
 # Solitaire Core
 ## Features
+- Movement Validation
 - Undo Manager
 - Save Files
 - Basic Hint / Automatic Move Bot
