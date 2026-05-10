@@ -71,23 +71,18 @@ public class ArtificialPlayer {
          Undo randomly changes the card visibility so that needs to be solved.
          */
         let validMoves = game.validMoves()
-            .filter { move in
-                switch move {
-                case .regular(_, _, let destinationPile):
-                    // Filter all moves that are not moves to the foundation
-                    if destinationPile.isFoundation {
-                        return true
-                    }
-                    
-                    return false
-                case .reStock:
-                    return false
-                case .drawStock(_):
-                    return false
-                case .none:
-                    return false
-                }
-            }
+        //     .filter { move in
+        //         switch move {
+        //         case .regular(_, _, let destinationPile):
+        //             return true
+        //         case .reStock:
+        //             return false
+        //         case .drawStock(_):
+        //             return false
+        //         case .none:
+        //             return false
+        //         }
+        //     }
         
         var scoredMoves: [(UInt16, SolitaireMove)] = []
         
@@ -99,9 +94,18 @@ public class ArtificialPlayer {
         
         scoredMoves.sort(by: {$0.0 > $1.0})
         
-        for move in scoredMoves {
-            print("Score: \(move.0) \(move.1)")
-        }
+        // for move in scoredMoves {
+        //     switch move.1 {
+        //     case .drawStock(_):
+        //         print("Draw Stock move: \(move.0)")
+        //     case .regular(let card, let sourcePile, let destinationPile):
+        //         print("Card \(card.description) from \(sourcePile.description) to \(destinationPile.description): \(move.0)")
+        //     case .reStock:
+        //         print("Restock: \(move.0)")
+        //     case .none:
+        //         print("Failed none")
+        //     }
+        // }
         
         return scoredMoves.first?.1
     }

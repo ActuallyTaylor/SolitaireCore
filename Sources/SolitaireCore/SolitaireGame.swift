@@ -22,6 +22,7 @@ public typealias RestockInteger = UInt16
 public typealias MoveInteger = UInt16
 public typealias DataVersionInteger = UInt8
 public typealias SeedInteger = UInt64
+public typealias SecondsInteger = UInt16
 
 // TODO: Add tests for three draw mode
 public enum DrawMode: UInt8, Sendable {
@@ -34,7 +35,6 @@ struct GameConfiguration {
     let undoAddsMove: Bool
     let drawMode: DrawMode
 }
-
 
 #if !hasFeature(Embedded) && canImport(SwiftUI)
 @Observable
@@ -58,6 +58,7 @@ public final class SolitaireGame {
     public let numberOfColumns = 7
     public let numberOfFoundationSlots = 4
 
+    public private(set) var seconds: SecondsInteger = 0
     public private(set) var restocks: RestockInteger = 0
     public private(set) var moves: MoveInteger = 0
     // Used to cap score at 0
@@ -121,7 +122,6 @@ public final class SolitaireGame {
         // Populate piles
         populatePiles()
     }
-
 
     static func generateSeed() -> SeedInteger {
         return SeedInteger.random(in: 0..<SeedInteger.max)
@@ -232,6 +232,10 @@ extension SolitaireGame {
 
     func subtractRestocks(value: UInt16) {
         restocks.safeSubtract(value: value)
+    }
+
+    public func setGameLength(seonds value: UInt16) {
+        seconds = value
     }
 }
 
@@ -361,11 +365,12 @@ extension SolitaireGame {
 
         let runLength = pile.cards.count - index
         let cardsToMove = pile.pop(count: runLength)
-        let originalCardsToMove = cardsToMove.map({$0.copy()})
+        let originalCardsToMove = cardsToMove.map({ $0.copy() })
 
         destination.add(cards: cardsToMove)
 
-        let integerScoreChange: Int = scoreKeeper.scoreRegularMove(card: card, source: pile, destination: destination, cardIndex: index)
+        let integerScoreChange: Int = scoreKeeper.scoreRegularMove(
+            card: card, source: pile, destination: destination, cardIndex: index)
 
         var scoreChange: ScoreInteger = 0
         var negativeScoreChange = false
@@ -419,7 +424,7 @@ extension SolitaireGame {
         guard !waste().isEmpty else { return false }
 
         waste().reverse()
-        waste().cards.forEach({$0.isVisible = false})
+        waste().cards.forEach({ $0.isVisible = false })
         swapPiles(waste(), stock())
         addRestocks(value: 1)
 
@@ -459,8 +464,14 @@ extension SolitaireGame {
 
             // Skip the first card because we have already set it as the lastCard and checked it is an ace
             for card in Array(foundationPile.cards.dropFirst()) {
-                guard card.isInSequence(lastCard) else { print("Card not in sequence: \(card), \(lastCard)"); return false }
-                guard card.suit == foundationSuit else { print("Card not the same suit \(card), \(foundationSuit)"); return false }
+                guard card.isInSequence(lastCard) else {
+                    print("Card not in sequence: \(card), \(lastCard)")
+                    return false
+                }
+                guard card.suit == foundationSuit else {
+                    print("Card not the same suit \(card), \(foundationSuit)")
+                    return false
+                }
 
                 lastCard = card
             }
@@ -520,7 +531,6 @@ extension SolitaireGame {
             signposter.emitEvent("Checked moving waste to foundation.", id: signpostID)
             #endif
         }
-
 
         // Check moving from the waste into any of the columns
         validMoves.append(contentsOf: checkValidMoves(for: waste(), against: columns()))
@@ -584,7 +594,6 @@ extension SolitaireGame {
         return true
     }
 
-
     private func isValidMove(_ card: PlayingCard, to destination: Pile) -> Bool {
         if destination.isEmpty {
             // If the destination is empty, only allow an ace in a foundation pile, and a king in any other pile
@@ -641,7 +650,7 @@ extension SolitaireGame {
 
 extension SolitaireGame: Copyable {
     func copy() -> SolitaireGame {
-        let piles = self.piles.map({$0.copy()})
+        let piles = self.piles.map({ $0.copy() })
         let game = SolitaireGame(piles: piles, seed: seed, undoManager: undoManager.copy(), scoreKeeper: scoreKeeper.copy())
         game.score = self.score
         game.moves = self.moves
@@ -653,7 +662,7 @@ extension SolitaireGame: Copyable {
 // MARK: Load & Save
 extension SolitaireGame {
     static let pileSeparator: UInt8 = 0xFF
-    public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth) / 8
+    public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth + SecondsInteger.bitWidth) / 8
 
     public static func saveGame(game: SolitaireGame) -> [UInt8] {
         var saveData: [UInt8] = []
@@ -666,18 +675,22 @@ extension SolitaireGame {
         }
 
         // Save game header
-        let versionByte: DataVersionInteger = 1
+        let versionByte: DataVersionInteger = 2
         let scoreBytes = game.score.bigEndianBytes
         let moveBytes = game.moves.bigEndianBytes
         let restockBytes = game.restocks.bigEndianBytes
+        let secondsBytes = game.seconds.bigEndianBytes
 
         // Insert header in reverse
+        saveData.insert(contentsOf: secondsBytes, at: 0)
         saveData.insert(contentsOf: restockBytes, at: 0)
         saveData.insert(contentsOf: moveBytes, at: 0)
         saveData.insert(contentsOf: scoreBytes, at: 0)
         saveData.insert(versionByte, at: 0)
 
-        print("Header Size \(headerSize) \(restockBytes.count + moveBytes.count + scoreBytes.count + 1)")
+//        print(
+//            "Header Size \(headerSize) \(restockBytes.count + moveBytes.count + scoreBytes.count + secondsBytes.count + 1)"
+//        )
 
         return saveData
     }
@@ -689,6 +702,7 @@ extension SolitaireGame {
         let score: ScoreInteger = ScoreInteger(from: Array(headerData[1...2]))
         let moves: MoveInteger = MoveInteger(from: Array(headerData[3...4]))
         let restocks = RestockInteger(from: Array(headerData[5...6]))
+        let seconds = SecondsInteger(from: Array(headerData[7...8]))
 
         // Mutate data to remove header
         let data = Array(data.dropFirst(headerSize))
@@ -714,7 +728,7 @@ extension SolitaireGame {
 
         for index in GamePileIndex.allCases {
             let separatedData = separatedData[index.rawValue]
-            let cards = separatedData.compactMap({PlayingCard(data: $0)})
+            let cards = separatedData.compactMap({ PlayingCard(data: $0) })
             guard cards.count == separatedData.count else {
                 print("Failed to load card in \(separatedData)")
                 continue
@@ -727,6 +741,7 @@ extension SolitaireGame {
         game.score = score
         game.moves = moves
         game.restocks = restocks
+        game.seconds = seconds
 
         return game
     }
