@@ -32,7 +32,7 @@ public final class Pile: Identifiable, CustomStringConvertible {
             self.id == .foundationFour
         )
     }
-    
+
     public var isColumn: Bool {
         return id <= GamePileIndex.columnSeven && id >= GamePileIndex.columnOne
     }
@@ -99,9 +99,9 @@ public final class Pile: Identifiable, CustomStringConvertible {
         if let index = cards.firstIndex(of: playingCard) {
             let belowIndex = index - 1
             guard belowIndex >= 0, belowIndex < cards.count else {
-                print("FAILURE \(belowIndex)")
-                 return nil
-              }
+                print("No Card Below \(belowIndex)")
+                return nil
+            }
 
             return cards[belowIndex]
         }

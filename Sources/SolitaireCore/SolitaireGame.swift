@@ -20,27 +20,36 @@ import SwiftUI
 public typealias ScoreInteger = UInt16
 public typealias RestockInteger = UInt16
 public typealias MoveInteger = UInt16
-public typealias DataVersionInteger = UInt8
 public typealias SeedInteger = UInt64
 public typealias SecondsInteger = UInt16
+public typealias DataVersionInteger = UInt8
 
 // TODO: Add tests for three draw mode
-public enum DrawMode: UInt8, Sendable {
+public enum DrawMode: UInt8, Sendable, CaseIterable {
     case one
     case three
+
+    public var description: String {
+        switch self {
+        case .one:
+            return "one"
+        case .three:
+            return "three"
+        }
+    }
 }
 
 struct GameConfiguration {
-    let canMoveFromWasteToFoundation: Bool
-    let undoAddsMove: Bool
-    let drawMode: DrawMode
+    var canMoveFromWasteToFoundation: Bool
+    var undoAddsMove: Bool
+    var drawMode: DrawMode
 }
 
 #if !hasFeature(Embedded) && canImport(SwiftUI)
 @Observable
 #endif
 public final class SolitaireGame {
-    internal let config: GameConfiguration = .init(
+    internal var config: GameConfiguration = .init(
         canMoveFromWasteToFoundation: true,
         undoAddsMove: true,
         drawMode: .one
@@ -79,19 +88,20 @@ public final class SolitaireGame {
 
         undoManager.target = self
         self.piles = piles
-        
+
         // Check if the game inputed is a solvedGame
         self.isSolved = checkIsGameSolved()
     }
-    
-    internal init(piles: [Pile], seed: SeedInteger, undoManager: SolitaireUndoManager, scoreKeeper: ScoreKeeper) {
+
+    internal init(piles: [Pile], seed: SeedInteger, undoManager: SolitaireUndoManager, scoreKeeper: ScoreKeeper, drawMode: DrawMode) {
         self.seed = seed
         self.undoManager = undoManager
         self.scoreKeeper = scoreKeeper
-        
+        self.config.drawMode = drawMode
+
         undoManager.target = self
         self.piles = piles
-        
+
         // Check if the game inputed is a solvedGame
         self.isSolved = checkIsGameSolved()
     }
@@ -239,6 +249,17 @@ extension SolitaireGame {
     }
 }
 
+// MARK: Config Accessors
+extension SolitaireGame {
+    public func setDrawMode(_ drawMode: DrawMode) {
+        self.config.drawMode = drawMode
+    }
+
+    public func getDrawMode() -> DrawMode {
+        return self.config.drawMode
+    }
+}
+
 // MARK: Pile Accessors
 extension SolitaireGame {
     public func stock() -> Pile {
@@ -299,6 +320,7 @@ extension SolitaireGame {
 // MARK: Movement
 extension SolitaireGame {
     public func drawFromStock() -> Bool {
+        print("Draw config \(config.drawMode.description)")
         let result = move(.drawStock(drawMode: config.drawMode))
 
         // Check to see if we could draw a card, if not put the waste back into the stock
@@ -651,7 +673,7 @@ extension SolitaireGame {
 extension SolitaireGame: Copyable {
     func copy() -> SolitaireGame {
         let piles = self.piles.map({ $0.copy() })
-        let game = SolitaireGame(piles: piles, seed: seed, undoManager: undoManager.copy(), scoreKeeper: scoreKeeper.copy())
+        let game = SolitaireGame(piles: piles, seed: seed, undoManager: undoManager.copy(), scoreKeeper: scoreKeeper.copy(), drawMode: config.drawMode)
         game.score = self.score
         game.moves = self.moves
         game.restocks = self.restocks
@@ -661,8 +683,9 @@ extension SolitaireGame: Copyable {
 
 // MARK: Load & Save
 extension SolitaireGame {
+    static let currentDataVersionByte: DataVersionInteger = 3
     static let pileSeparator: UInt8 = 0xFF
-    public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth + SecondsInteger.bitWidth) / 8
+    public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth + SecondsInteger.bitWidth + DrawMode.RawValue.bitWidth) / 8
 
     public static func saveGame(game: SolitaireGame) -> [UInt8] {
         var saveData: [UInt8] = []
@@ -675,22 +698,19 @@ extension SolitaireGame {
         }
 
         // Save game header
-        let versionByte: DataVersionInteger = 2
         let scoreBytes = game.score.bigEndianBytes
         let moveBytes = game.moves.bigEndianBytes
         let restockBytes = game.restocks.bigEndianBytes
         let secondsBytes = game.seconds.bigEndianBytes
+        let drawModeByte = game.config.drawMode.rawValue // No need for big endian bytes, since it is a singular byte.
 
         // Insert header in reverse
+        saveData.insert(drawModeByte, at: 0)
         saveData.insert(contentsOf: secondsBytes, at: 0)
         saveData.insert(contentsOf: restockBytes, at: 0)
         saveData.insert(contentsOf: moveBytes, at: 0)
         saveData.insert(contentsOf: scoreBytes, at: 0)
-        saveData.insert(versionByte, at: 0)
-
-//        print(
-//            "Header Size \(headerSize) \(restockBytes.count + moveBytes.count + scoreBytes.count + secondsBytes.count + 1)"
-//        )
+        saveData.insert(SolitaireGame.currentDataVersionByte, at: 0)
 
         return saveData
     }
@@ -699,10 +719,18 @@ extension SolitaireGame {
         // Get header data
         let headerData: [UInt8] = Array(data[0..<headerSize])
 
+        let version: DataVersionInteger = DataVersionInteger(headerData[0])
+
+        // Check to see if the versions match, if not let the user know it may be incorrect.
+        if version != SolitaireGame.currentDataVersionByte {
+            print("Save game version is \(version), but \(SolitaireGame.currentDataVersionByte) is the expected version. Loading may be incorrect.")
+        }
+
         let score: ScoreInteger = ScoreInteger(from: Array(headerData[1...2]))
         let moves: MoveInteger = MoveInteger(from: Array(headerData[3...4]))
         let restocks = RestockInteger(from: Array(headerData[5...6]))
         let seconds = SecondsInteger(from: Array(headerData[7...8]))
+        let drawMode = DrawMode(rawValue: headerData[9]) ?? .one
 
         // Mutate data to remove header
         let data = Array(data.dropFirst(headerSize))
@@ -742,6 +770,7 @@ extension SolitaireGame {
         game.moves = moves
         game.restocks = restocks
         game.seconds = seconds
+        game.config.drawMode = drawMode
 
         return game
     }
