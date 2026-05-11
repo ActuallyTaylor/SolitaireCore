@@ -12,11 +12,14 @@ struct UndoManagerTests {
     // MARK: Undo Tests
     @Test("Test undo basic move", arguments: [
         // Simple
-        [[], [], [], [], [], [], ["3♠"], ["2♥"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3♠V"], ["2♥V"], [], [], [], [], []],
 
         // Stack
         [[], [], [], [], [], [], ["4♥V"], ["3♠V", "2♥V"], [], [], [], [], []],
         
+        // Stack with one bottom invisible
+        [[], [], [], [], [], [], ["4♥V"], ["10♠", "3♠V", "2♥V"], [], [], [], [], []],
+
     ])
     func testUndoCardMovement(_ gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)

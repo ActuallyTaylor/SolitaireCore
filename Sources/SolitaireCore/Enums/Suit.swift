@@ -53,13 +53,13 @@ public enum Suit: UInt8, CaseIterable, Hashable, Sendable {
 
     static func from(_ string: String) -> Suit? {
         switch string {
-        case "♠":
+        case "♠", "S":
             return .spades
-        case "♥":
+        case "♥", "H":
             return .hearts
-        case "♦":
+        case "♦", "D":
             return .diamonds
-        case "♣":
+        case "♣", "C":
             return .clubs
         default:
             return nil
