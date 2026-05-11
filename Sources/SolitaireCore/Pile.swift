@@ -37,7 +37,6 @@ public final class Pile: Identifiable, CustomStringConvertible {
         return id <= GamePileIndex.columnSeven && id >= GamePileIndex.columnOne
     }
 
-
     public init(id: GamePileIndex, cards: [PlayingCard]) {
         self.id = id
         self.cards = cards

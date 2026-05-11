@@ -38,30 +38,30 @@
 //
 ////         let nextMove = player.nextMove()
 ////         print(nextMove)
-//         
+//
 ////         player.allValidMoves()
 //     }
-     
-     @Test("Test single move to win", arguments: [
-         [
-             [], [],
-             ["A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠"],
-             ["A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦"],
-             ["A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣"],
-             ["A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥"],
-             ["K♥"], [], [], [], [], [], []
-         ],
-     ])
-     func testSingleMoveToWin(gameRep: [[String]]) {
-         let game = SolitaireGame.loadGame(from: gameRep)
-         let nextMove = ArtificialPlayer.nextMove(game: game)
-         
-         if case .regular(let card, let pile, let destination) = nextMove {
-             #expect(card == .init(suit: .hearts, rank: .king))
-             #expect(destination.isFoundation)
-         }
 
-//         player.solve(game: game)
-     }
+//      @Test("Test single move to win", arguments: [
+//          [
+//              [], [],
+//              ["A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠"],
+//              ["A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦"],
+//              ["A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣"],
+//              ["A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥"],
+//              ["K♥"], [], [], [], [], [], []
+//          ],
+//      ])
+//      func testSingleMoveToWin(gameRep: [[String]]) {
+//          let game = SolitaireGame.loadGame(from: gameRep)
+//          let nextMove = ArtificialPlayer.nextMove(game: game)
+
+//          if case .regular(let card, let pile, let destination) = nextMove {
+//              #expect(card == .init(suit: .hearts, rank: .king))
+//              #expect(destination.isFoundation)
+//          }
+
+// //         player.solve(game: game)
+//      }
 
  }

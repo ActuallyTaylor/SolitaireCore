@@ -60,14 +60,26 @@ public final class PlayingCard: CustomStringConvertible {
     #if !hasFeature(Embedded)
     // Embedded swift does not support string splitting without extra packages, so do not include this.
     init?(string: String) {
-        guard !string.isEmpty else { return nil }
-
-        let stringSuit = String(string.last!)
+        // We need to strip the visibility flag from the back of the string
+        var stringLeftToProcess = string
+        
+        // If the visibility character exists, set visible and remove the flag.
+        if let firstCharacter = stringLeftToProcess.last, firstCharacter == "V" {
+            self.isVisible = true
+            stringLeftToProcess = String(stringLeftToProcess.dropLast())
+        }
+        
+        guard let lastCharacter = stringLeftToProcess.last else { return nil }
+        let stringSuit = String(lastCharacter)
+        
+        // Remove the suit from the string
+        stringLeftToProcess = String(stringLeftToProcess.dropLast())
 
         guard let newSuit = Suit.from(stringSuit) else { return nil }
         self.suit = newSuit
 
-        let rankString = String(string.dropLast())
+        // Everything left in the string is the rank
+        let rankString = stringLeftToProcess
         guard let newRank = Rank.from(rankString) else { return nil }
         self.rank = newRank
     }

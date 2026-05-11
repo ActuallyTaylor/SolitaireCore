@@ -74,7 +74,7 @@ public final class SolitaireGame {
     private var _score: ScoreInteger = 0
     public private(set) var score: ScoreInteger {
         get { _score }
-        set { print("Score Changed original: \(_score), new: \(newValue)"); _score = max(0, newValue) }
+        set { _score = max(0, newValue) }
     }
     public private(set) var isSolved: Bool = false
 
@@ -320,7 +320,6 @@ extension SolitaireGame {
 // MARK: Movement
 extension SolitaireGame {
     public func drawFromStock() -> Bool {
-        print("Draw config \(config.drawMode.description)")
         let result = move(.drawStock(drawMode: config.drawMode))
 
         // Check to see if we could draw a card, if not put the waste back into the stock
@@ -376,6 +375,7 @@ extension SolitaireGame {
     private func moveCard(card: PlayingCard, from pile: Pile, to destination: Pile) -> Bool {
         guard isValidMove(card, to: destination) else { return false }
         guard let index = pile.cards.firstIndex(of: card) else { return false }
+        
         if pile.isFoundation && destination.isFoundation {
             // Let you move foundation cards around
             guard destination.isEmpty else { return false }

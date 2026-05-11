@@ -47,9 +47,7 @@ final class SolitaireUndoManager {
         switch package {
         case .moveCards(
             let cards, let source, let destination, let scoreChange, let negativeScoreChange):
-            undoMoveCardPackage(
-                cards: cards, source: source, destination: destination, scoreChange: scoreChange,
-                negativeScoreChange: negativeScoreChange)
+            undoMoveCardPackage(cards: cards, source: source, destination: destination, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange)
         case .drawStock(let cards):
             try undoStockPackage(cards: cards)
         case .restock(let scoreChange):
@@ -57,17 +55,15 @@ final class SolitaireUndoManager {
         }
     }
 
-    private func undoMoveCardPackage(
-        cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex,
-        scoreChange: ScoreInteger, negativeScoreChange: Bool
-    ) {
+    private func undoMoveCardPackage(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex,scoreChange: ScoreInteger, negativeScoreChange: Bool) {
         guard let sourcePile = target?.pile(at: source) else { return }
         guard let destinationPile = target?.pile(at: destination) else { return }
 
-        // If the card above the top card is visible, we do not want to set the visibility to false.
-        if !(sourcePile.cardFromTop(offset: 2)?.isVisible ?? false) {
+        // This allows standard undos (column -> column) to revert the visibility of the card they are undoing onto.
+        if sourcePile.isColumn, sourcePile.cards.count >= 2, !(sourcePile.cardFromTop(offset: 2)?.isVisible ?? false) {
             sourcePile.top()?.isVisible = false
         }
+                        
         destinationPile.remove(cards: cards)
         sourcePile.add(cards: cards)
 
@@ -77,7 +73,7 @@ final class SolitaireUndoManager {
             target?.subtractScore(value: scoreChange)
         }
     }
-    
+
     private func undoStockPackage(cards: [PlayingCard]) throws(UndoError) {
         guard let target else { throw UndoError.stackEmpty }
         // Access the waste and stock directly. Not the best but it reduces the data size for the UndoPackage
