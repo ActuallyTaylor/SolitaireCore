@@ -165,12 +165,8 @@ public final class SolitaireGame {
         // There should always be 52 cards
         assert(deck.count == SolitaireGame.totalCards)
 
-//        if seed != -1 {
-//            var rng = SeededRandomNumberGenerator(seed: seed)
-//            deck.shuffle(using: &rng)
-//        } else {
-            deck.shuffle()
-//        }
+        var rng = SeededRandomNumberGenerator(seed: seed)
+        deck.shuffle(using: &rng)
 
         #if PROFILE
         signposter.emitEvent("Column population complete.", id: signpostID)
