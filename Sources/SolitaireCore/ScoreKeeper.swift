@@ -54,6 +54,7 @@ final class ScoreKeeper {
         
         // Score moving a card from the foundation to a column.
         if source.isFoundation && destination.isColumn {
+            // Move away from foundation costs 15 points. It is stored as positive 15, so subtract it here.p
             scoreChange -= Int(ScoreEvent.moveAwayFromFoundation.scoreChange)
         }
 

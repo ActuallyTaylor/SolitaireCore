@@ -10,8 +10,9 @@ enum ScoreEvent {
     case moveToAnotherPile
 
     case moveFromWaste
-    
+
     case moveToFoundation
+    /// This value is subtracted when scoring. When a card is moved out of the foundation it is a penalty. This is kept as a positive number here to allow the callsit to do `-=` which feels better and is easier to read.
     case moveAwayFromFoundation
 
     case restockDrawThree
@@ -32,6 +33,7 @@ enum ScoreEvent {
         case .moveToAnotherPile:
             3
         case .moveAwayFromFoundation:
+            /// This value is subtracted when scoring, so it subtracts 15 from the score.
             15
         }
     }
