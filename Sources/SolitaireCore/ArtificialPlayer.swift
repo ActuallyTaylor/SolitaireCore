@@ -63,37 +63,37 @@ public class ArtificialPlayer {
     //        }
     //    }
     
-    public static func nextMove(game: SolitaireGame) -> SolitaireMove? {
-        let game = game.copy()
+    
+    public func bestMove(in gameState: SolitaireGame) -> SolitaireMove? {
+        // It is REALLY important to copy the game state. SolitaireGame is a class which is a reference type.
+        // If we did not copy the state, we would edit the object coming in. This could be fixed in the future
+        // by passing a game representation instead of an object.
+        let gameState = gameState.copy()
         
-        /*
-         Valid moves are a mess, scoring is incorrect
-         Undo randomly changes the card visibility so that needs to be solved.
-         */
-        let validMoves = game.validMoves()
-        //     .filter { move in
-        //         switch move {
-        //         case .regular(_, _, let destinationPile):
-        //             return true
-        //         case .reStock:
-        //             return false
-        //         case .drawStock(_):
-        //             return false
-        //         case .none:
-        //             return false
-        //         }
-        //     }
+        // Fetch the next all of the possible moves
+        let validMoves = gameState.validMoves()
         
         var scoredMoves: [(UInt16, SolitaireMove)] = []
         
+        // Score each of the moves by counting their score increase.
         for validMove in validMoves {
-            let gameCopy = game.copy()
+            let gameCopy = gameState.copy()
             gameCopy.move(validMove)
             scoredMoves.append((gameCopy.score, validMove))
         }
+
+        /*
+         Thoughts:
+         At the moment i think the reference copying is not the best forward move. It copies the entire game state including undo managers and score keepers.
+         I think this is going to require a restructure
+         */
+    }
+    
+    public static func nextMove(state game: SolitaireGame) -> SolitaireMove? {
+        let game = game.copy()
         
-        scoredMoves.sort(by: {$0.0 > $1.0})
         
+
         // for move in scoredMoves {
         //     switch move.1 {
         //     case .drawStock(_):
