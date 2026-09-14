@@ -10,16 +10,15 @@ import Testing
 
 struct UndoManagerTests {
     // MARK: Undo Tests
-    @Test("Test undo basic move", arguments: [
-        // Simple
-        [[], [], [], [], [], [], ["3♠V"], ["2♥V"], [], [], [], [], []],
+    @Test("Test undo basic move by moving column two onto column 1. ", arguments: [
+        // Simple, move a 2 of hearts onto a 3 of spades.
+        [[], [], [], [], [], [], ["3SV"], ["2HV"], [], [], [], [], []],
 
-        // Stack
-        [[], [], [], [], [], [], ["4♥V"], ["3♠V", "2♥V"], [], [], [], [], []],
+        // Stack, Move a stack under a 3 of spades onto a 4 of hearts.
+        [[], [], [], [], [], [], ["4HV"], ["3SV", "2HV"], [], [], [], [], []],
         
-        // Stack with one bottom invisible
-        [[], [], [], [], [], [], ["4♥V"], ["10♠", "3♠V", "2♥V"], [], [], [], [], []],
-
+        // Stack with one bottom invisible, We want to make sure the visibility of cards is preserved despite this not being a legal move.
+        [[], [], [], [], [], [], ["5SV"], ["4H", "3SV", "2HV"], [], [], [], [], []],
     ])
     func testUndoCardMovement(_ gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
