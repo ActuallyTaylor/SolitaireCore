@@ -54,10 +54,10 @@ struct UndoManagerTests {
 
     @Test("Test multiple move undos", arguments: [
         // Simple
-        [[], [], [], [], [], [], ["4♠"], ["3♥"], ["2♠"], [], [], [], []],
+        [[], [], [], [], [], [], ["4S"], ["3H"], ["2S"], [], [], [], []],
 
         // Stack
-        [[], [], [], [], [], [], ["5♥"], ["4♠", "3♥"], ["2♠"], [], [], [], []],
+        [[], [], [], [], [], [], ["5H"], ["4S", "3H"], ["2S"], [], [], [], []],
     ])
     func testUndoMultipleMoves(_ gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -96,10 +96,10 @@ struct UndoManagerTests {
 
     @Test("Test undos properly wiped", arguments: [
         // Simple
-        [[], [], [], [], [], [], ["4♠"], ["3♥"], ["2♠"], [], [], [], []],
+        [[], [], [], [], [], [], ["4S"], ["3H"], ["2S"], [], [], [], []],
 
         // Stack
-        [[], [], [], [], [], [], ["5♥"], ["4♠", "3♥"], ["2♠"], [], [], [], []],
+        [[], [], [], [], [], [], ["5H"], ["4S", "3H"], ["2S"], [], [], [], []],
     ])
     func testUndosWipedOnMove(_ gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -143,8 +143,8 @@ struct UndoManagerTests {
 
     @Test("Test undo draw from stock", arguments: [
         // Draw one card from stock into waste
-        [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []],
-        [["K♥", "Q♥"], [], [], [], [], [], [], [], [], [], [], [], []],
+        [["KH"], [], [], [], [], [], [], [], [], [], [], [], []],
+        [["KH", "QH"], [], [], [], [], [], [], [], [], [], [], [], []],
     ])
     func testUndoDrawFromStock(gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -169,10 +169,10 @@ struct UndoManagerTests {
     @Test("Validate undo does not break card visibility")
     func testUndoDoesNotBreakVisibility() throws {
         let gameRep = [
-            ["Q♥", "3♠", "5♠"], [ ],
+            ["QH", "3S", "5S"], [ ],
             [], [], [], [],
-            ["K♠"], [], [], [], [], [], []
-            // , "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠"
+            ["KS"], [], [], [], [], [], []
+            // , "4S", "5S", "6S", "7S", "8S", "9S", "10S", "JS", "QS", "KS"
         ]
 
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -212,9 +212,9 @@ struct UndoManagerTests {
 
     @Test("Test restock", arguments: [
         // Restock one card into stock
-        [[], ["K♥"], [], [], [], [], [], [], [], [], [], [], []],
+        [[], ["KH"], [], [], [], [], [], [], [], [], [], [], []],
         // Restock two cards into stock
-        [[], ["Q♥", "K♥"], [], [], [], [], [], [], [], [], [], [], []]
+        [[], ["QH", "KH"], [], [], [], [], [], [], [], [], [], [], []]
     ])
     func testUndoRestock(gameRep: [[String]]) throws {
         let game = SolitaireGame.loadGame(from: gameRep)

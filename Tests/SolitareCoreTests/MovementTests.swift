@@ -12,20 +12,20 @@ struct MovementTests {
     // Columns 1 & 2 are populated with a alternating colors. This tests moving a Red -> Black & Black -> Red
     @Test("Test moving a single card onto aother card", arguments: [
         // Spades & Hearts
-        [[], [], [], [], [], [], ["3♠"], ["2♥"], [], [], [], [], []],
-        [[], [], [], [], [], [], ["3♥"], ["2♠"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3S"], ["2H"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3H"], ["2S"], [], [], [], [], []],
         
         // Spades & Diamonds
-        [[], [], [], [], [], [], ["3♠"], ["2♦"], [], [], [], [], []],
-        [[], [], [], [], [], [], ["3♦"], ["2♠"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3S"], ["2D"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3D"], ["2S"], [], [], [], [], []],
         
         // Clubs & Hearts
-        [[], [], [], [], [], [], ["3♣"], ["2♥"], [], [], [], [], []],
-        [[], [], [], [], [], [], ["3♥"], ["2♣"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3C"], ["2H"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3H"], ["2C"], [], [], [], [], []],
         
         // Clubs & Diamonds
-        [[], [], [], [], [], [], ["3♣"], ["2♦"], [], [], [], [], []],
-        [[], [], [], [], [], [], ["3♦"], ["2♣"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3C"], ["2D"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3D"], ["2C"], [], [], [], [], []],
     ])
     func testCardMovement(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -39,8 +39,8 @@ struct MovementTests {
     
     // Columns 1 & 2 are populated with a alternating colors. This tests moving a Red -> Black & Black -> Red
     @Test("Test moving a single card onto aother card", arguments: [
-        [[], [], ["A♥"], [], [], [], ["3♥"], [], [], [], [], [], []],
-        [[], [], ["A♥"], [], [], [], ["2♠"], [], [], [], [], [], []],
+        [[], [], ["AH"], [], [], [], ["3H"], [], [], [], [], [], []],
+        [[], [], ["AH"], [], [], [], ["2S"], [], [], [], [], [], []],
     ])
     func testInvalidCardMovement(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -55,8 +55,8 @@ struct MovementTests {
 
     @Test("Test moving two cards at a time", arguments: [
         // Column 1 is populated with two cards of alternating suits. Column 2 is populated with an alternate suit 1 higher rank than the top card in column 1.
-        [[], [], [], [], [], [], ["3♥", "2♠"], ["4♠"], [], [], [], [], []],
-        [[], [], [], [], [], [], ["3♠", "2♥"], ["4♥"], [], [], [], [], []]
+        [[], [], [], [], [], [], ["3H", "2S"], ["4S"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3S", "2H"], ["4H"], [], [], [], [], []]
     ])
     func testMoveMultipleCardsValid(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -71,9 +71,9 @@ struct MovementTests {
 
     @Test("Test moving two cards onto an invalid position", arguments: [
         // Tests moving a card onto another that is the same color (fails)
-        [[], [], [], [], [], [], ["3♥", "2♠"], ["4♥"], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3H", "2S"], ["4H"], [], [], [], [], []],
         // Tests moving a card onto a card not one rank above
-        [[], [], [], [], [], [], ["3♥", "2♠"], ["5♠"], [], [], [], [], []]
+        [[], [], [], [], [], [], ["3H", "2S"], ["5S"], [], [], [], [], []]
     ])
     func testMoveMultipleCardsInvalid(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -90,7 +90,7 @@ struct MovementTests {
     
     @Test("Test picking up cards", arguments: [
         // Tests moving a card onto another that is the same color (fails)
-        [[], [], [], [], [], [], ["3♥", "2♠"], [], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3H", "2S"], [], [], [], [], [], []],
     ])
     func testPickUpCardsValid(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -109,7 +109,7 @@ struct MovementTests {
     
     @Test("Test picking up cards fails because it is picking up an invisible card", arguments: [
         // Tests moving a card onto another that is the same color (fails)
-        [[], [], [], [], [], [], ["3♥", "2♠"], [], [], [], [], [], []],
+        [[], [], [], [], [], [], ["3H", "2S"], [], [], [], [], [], []],
     ])
     func testPickUpCardsInvalidBecauseInvisible(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -128,8 +128,8 @@ struct MovementTests {
 
     @Test("Test draw from stock", arguments: [
         // Draw one card from stock into waste
-        [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []],
-        [["K♥", "Q♥"], [], [], [], [], [], [], [], [], [], [], [], []],
+        [["KH"], [], [], [], [], [], [], [], [], [], [], [], []],
+        [["KH", "QH"], [], [], [], [], [], [], [], [], [], [], [], []],
     ])
     func testDrawFromStockMove(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -144,9 +144,9 @@ struct MovementTests {
 
     @Test("Test restock", arguments: [
         // Restock one card into stock
-        [[], ["K♥"], [], [], [], [], [], [], [], [], [], [], []],
+        [[], ["KH"], [], [], [], [], [], [], [], [], [], [], []],
         // Restock two cards into stock
-        [[], ["Q♥", "K♥"], [], [], [], [], [], [], [], [], [], [], []]
+        [[], ["QH", "KH"], [], [], [], [], [], [], [], [], [], [], []]
     ])
     func testRestockMove(gameRep: [[String]]) {
         let game = SolitaireGame.loadGame(from: gameRep)
@@ -165,7 +165,7 @@ struct MovementTests {
 
     @Test("Test draw from stock shortcut function")
     func testDrawFromStockShortcutFunction() {
-        let gameRep: [[String]] = [["K♥"], [], [], [], [], [], [], [], [], [], [], [], []]
+        let gameRep: [[String]] = [["KH"], [], [], [], [], [], [], [], [], [], [], [], []]
         let game = SolitaireGame.loadGame(from: gameRep)
         
         let stock = game.piles[GamePileIndex.stock.rawValue]

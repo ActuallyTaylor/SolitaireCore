@@ -16,10 +16,10 @@ let package = Package(
             name: "SolitaireCore.SwiftUI",
             targets: ["SolitaireCore.SwiftUI"]
         ),
-        .library(
-            name: "EmbeddedSolitaireCore",
-            targets: ["EmbeddedSolitaireCore"]
-        ),
+//        .library(
+//            name: "EmbeddedSolitaireCore",
+//            targets: ["EmbeddedSolitaireCore"]
+//        ),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -27,20 +27,20 @@ let package = Package(
         .target(
             name: "SolitaireCore"
         ),
-        .target(
-            name: "EmbeddedSolitaireCore",
-            swiftSettings: [
-                .enableExperimentalFeature("Embedded"),
-                .unsafeFlags([
-                    "-whole-module-optimization",
-                    "-Xfrontend", "-disable-objc-interop",
-                    "-Xfrontend", "-disable-stack-protector",
-                    "-Xfrontend", "-function-sections",
-                    "-Xfrontend", "-gline-tables-only",
-                    "-Xcc", "-DTARGET_EXTENSION"
-                ])
-            ],
-        ),
+//        .target(
+//            name: "EmbeddedSolitaireCore",
+//            swiftSettings: [
+//                .enableExperimentalFeature("Embedded"),
+//                .unsafeFlags([
+//                    "-whole-module-optimization",
+//                    "-Xfrontend", "-disable-objc-interop",
+//                    "-Xfrontend", "-disable-stack-protector",
+//                    "-Xfrontend", "-function-sections",
+//                    "-Xfrontend", "-gline-tables-only",
+//                    "-Xcc", "-DTARGET_EXTENSION"
+//                ])
+//            ],
+//        ),
         .target(
             name: "SolitaireCore.SwiftUI",
             dependencies: ["SolitaireCore"]
