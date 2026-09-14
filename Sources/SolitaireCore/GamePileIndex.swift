@@ -6,19 +6,19 @@
 //
 
 public enum GamePileIndex: Int, CaseIterable, Sendable {
-    case stock
-    case waste
-    case foundationOne
-    case foundationTwo
-    case foundationThree
-    case foundationFour
-    case columnOne
-    case columnTwo
-    case columnThree
-    case columnFour
-    case columnFive
-    case columnSix
-    case columnSeven
+    case stock = 0
+    case waste = 1
+    case foundationOne = 2
+    case foundationTwo = 3
+    case foundationThree = 4
+    case foundationFour = 5
+    case columnOne = 6
+    case columnTwo = 7
+    case columnThree = 8
+    case columnFour = 9
+    case columnFive = 10
+    case columnSix = 11
+    case columnSeven = 12
 
     public static var count: Int {
         return GamePileIndex.columnSeven.rawValue

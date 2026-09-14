@@ -17,12 +17,12 @@ import Foundation
 import SwiftUI
 #endif
 
+public typealias DataVersionInteger = UInt8
 public typealias ScoreInteger = UInt16
 public typealias RestockInteger = UInt16
 public typealias MoveInteger = UInt16
-public typealias SeedInteger = UInt64
 public typealias SecondsInteger = UInt16
-public typealias DataVersionInteger = UInt8
+public typealias SeedInteger = UInt64
 
 // TODO: Add tests for three draw mode
 public enum DrawMode: UInt8, Sendable, CaseIterable {
@@ -684,38 +684,93 @@ extension SolitaireGame: Copyable {
     }
 }
 
-// MARK: Load & Save
+// MARK: Load & Save binary games
 extension SolitaireGame {
     static let currentDataVersionByte: DataVersionInteger = 4
     static let pileSeparator: UInt8 = 0xFF
     public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth + SecondsInteger.bitWidth + DrawMode.RawValue.bitWidth + SeedInteger.bitWidth) / 8
-
+    
+    /// Byte count of a saved SolitaireGame from ``SolitaireGame/saveGame(game:)``.
+    ///
+    /// Currently accurate for ```currentDataVersionByte`` ==  4`
+    public static let byteCount: Int = headerSize + (52 * PlayingCard.byteCount) + (GamePileIndex.count + 1)
+    
+    /// Save a game of solitaire into raw  [UInt8] data.
+    ///
+    /// Header Format, bytes 0-17.
+    /// | Location | Size    | Label                           |
+    /// | -------- | ------- | ------------------------------- |
+    /// | 0        | uint 8  | Format data version             |
+    /// | 1 - 2    | uint 16 | Current game score              |
+    /// | 3 - 4    | uint 16 | Current move count              |
+    /// | 5 - 6    | uint 16 | Current restock count           |
+    /// | 7 - 8    | uint 16 | Number of seconds spent playing |
+    /// | 9        | uint 8  | Draw mode (0 = one, 1 = three)  |
+    /// | 10-17    | uint 64 | Game seed                       |
+    ///
+    /// Playing card format, bytes 18-83
+    /// This part of the format is dynamic but follows an easy pattern.
+    /// Piles are stored as list of playing cards separated by a marker (0xFF).
+    /// Piles can be empty. Two empty piles will appear as [0xFF, 0xFF] in the output.
+    ///
+    /// There are always 52 playing card entries, which are 52 bytes.
+    /// There are always 13 pile entires, which are 13 bytes.
+    ///
+    ///
+    /// This is pseudo code for the pile saving portion of the file.
+    /// ```
+    /// for each pile
+    ///     for each card
+    ///         data += card.data
+    ///     data += 0xFF
+    /// ```
+    ///
+    /// - Parameter game: The game state to save.
+    /// - Returns: A [UInt8] representation of a solitaire game.
     public static func saveGame(game: SolitaireGame) -> [UInt8] {
         var saveData: [UInt8] = []
 
+        // Save game header
+        // Data version, byte 0
+        saveData.append(SolitaireGame.currentDataVersionByte)
+        
+        // Score, bytes 1 - 2
+        let scoreBytes = game.score.bigEndianBytes
+        saveData.append(contentsOf: scoreBytes)
+
+        // Number of moves, bytes 3 - 4
+        let moveBytes = game.moves.bigEndianBytes
+        saveData.append(contentsOf: moveBytes)
+
+        // Number of restocks, bytes 5 - 6
+        let restockBytes = game.restocks.bigEndianBytes
+        saveData.append(contentsOf: restockBytes)
+
+        // Number of seconds spent playing, bytes 7 - 8
+        let secondsBytes = game.seconds.bigEndianBytes
+        saveData.append(contentsOf: secondsBytes)
+        
+        // The draw mode of the game, byte 9
+        // No need for big endian bytes, since it is a singular byte.
+        let drawModeByte = game.config.drawMode.rawValue
+        saveData.append(drawModeByte)
+
+        // Game seed, byte 10-17
+        let seedBytes = game.seed.bigEndianBytes
+        saveData.append(contentsOf: seedBytes)
+        
+        // Save the current card state, bytes 18-83
+        // 52 of those bytes are playing cards, 13 of the bytes are pile separators.
+        // After the end of every pile in 0xFF is added. When the game is loaded, piles
+        // are loaded in the order of GamePileIndex.
         for index in GamePileIndex.allCases {
             let pile = game.pile(at: index)
             let cards: [UInt8] = pile.getCards().map({ $0.data() })
+            // Append the card data for this pile. Variable byte length.
             saveData.append(contentsOf: cards)
+            // Append the pile separator, one byte.
             saveData.append(SolitaireGame.pileSeparator)
         }
-
-        // Save game header
-        let scoreBytes = game.score.bigEndianBytes
-        let moveBytes = game.moves.bigEndianBytes
-        let restockBytes = game.restocks.bigEndianBytes
-        let secondsBytes = game.seconds.bigEndianBytes
-        let drawModeByte = game.config.drawMode.rawValue // No need for big endian bytes, since it is a singular byte.
-        let seedBytes = game.seed.bigEndianBytes
-
-        // Insert header in reverse
-        saveData.insert(contentsOf: seedBytes, at: 0)
-        saveData.insert(drawModeByte, at: 0)
-        saveData.insert(contentsOf: secondsBytes, at: 0)
-        saveData.insert(contentsOf: restockBytes, at: 0)
-        saveData.insert(contentsOf: moveBytes, at: 0)
-        saveData.insert(contentsOf: scoreBytes, at: 0)
-        saveData.insert(SolitaireGame.currentDataVersionByte, at: 0)
 
         return saveData
     }
@@ -788,7 +843,8 @@ extension SolitaireGame {
 }
 
 #if !hasFeature(Embedded)
-// MARK: Embedded swift does not support strings without extra packages, so disable string based loading
+// MARK: Load and save string games
+/// Note: Embedded swift does not support strings without extra packages, so disable string based loading
 extension SolitaireGame {
     public static func loadGame(from stringRep: [[String]]) -> SolitaireGame {
         var piles: [Pile] = []

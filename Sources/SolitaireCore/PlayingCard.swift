@@ -6,6 +6,8 @@
 //
 
 public final class PlayingCard: CustomStringConvertible {
+    public static let byteCount = 1
+    
     public let suit: Suit
     public let rank: Rank
 
