@@ -24,12 +24,12 @@ public final class PlayingCard: CustomStringConvertible {
         self.isVisible = visible
     }
 
-    /*
+    /**
         Bit: 7   6 5 4    3 2 1 0
-         ^   ^^^^^    ^^^^^^
-         |     |        |
-      visible  suit     rank
-       (1b)    (3b)     (4b)
+             ^   ^^^^^    ^^^^^^^
+             |     |        |
+          visible  suit     rank
+           (1b)    (3b)     (4b)
     */
     public init?(data: UInt8) {
         self.isVisible = ((data & 0b10000000) >> 7) != 0
