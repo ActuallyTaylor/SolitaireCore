@@ -87,6 +87,7 @@ public class ArtificialPlayer {
          At the moment i think the reference copying is not the best forward move. It copies the entire game state including undo managers and score keepers.
          I think this is going to require a restructure
          */
+        return nil
     }
     
     public static func nextMove(state game: SolitaireGame) -> SolitaireMove? {
@@ -107,7 +108,8 @@ public class ArtificialPlayer {
         //     }
         // }
         
-        return scoredMoves.first?.1
+//        return scoredMoves.first?.1
+        return nil
     }
 }
 
