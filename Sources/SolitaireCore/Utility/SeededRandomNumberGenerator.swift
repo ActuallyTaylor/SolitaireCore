@@ -5,7 +5,7 @@
 //  Created by Taylor Lineman on 8/6/25.
 //
 
-struct SeededRandomNumberGenerator: RandomNumberGenerator {
+struct SeededRandomNumberGenerator: RandomNumberGenerator, Equatable {
     private var state: UInt64
 
     init(seed: UInt64) {
