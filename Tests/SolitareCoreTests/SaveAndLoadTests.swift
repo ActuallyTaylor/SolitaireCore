@@ -29,9 +29,25 @@ struct LoadingTests {
         #expect(game == loadedGame)
     }
     
-    @Test("Test loading a seeded game", arguments: [1, 2, 3, 4, 5])
-    func testSeededGames(seed: Int) {
-//        let game = SolitaireGame(seed: seed)
-//        #expect(game.seed == seed)
+    @Test("Seed loads the same in binary games", arguments: [
+        13478432, 314921, 31494832, 123491820394, 134, 1, 0
+    ])
+    func testBinarySaveLoadsTheSameGame(seed: UInt64) {
+        let game = SolitaireGame(seed: seed)
+        let savedGame = SolitaireGame.saveGame(game: game)
+                
+        let loadedGame = SolitaireGame.loadGame(from: savedGame)
+
+        #expect(game == loadedGame)
+    }
+
+    
+    @Test("Test the same seed always produces the same game", arguments: [
+        0, 1, 3, 4, 5, 6, 10314324, 523491238912389, 124389213, 13412579, 94594
+    ])
+    func testSeedProducesSameDeck(seed: SeedInteger) {
+        let game1 = SolitaireGame(seed: seed)
+        let game2 = SolitaireGame(seed: seed)
+        #expect(game1 == game2)
     }
 }

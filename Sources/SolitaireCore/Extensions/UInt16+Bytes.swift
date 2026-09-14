@@ -14,6 +14,7 @@ extension UInt16 {
     }
     
     init(from data: [UInt8]) {
+        guard data.count >= 2 else { self = 0; return }
         let msb = UInt16(data[0])
         let lsb = UInt16(data[1])
         

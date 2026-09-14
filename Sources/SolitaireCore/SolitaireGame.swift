@@ -105,11 +105,13 @@ public final class SolitaireGame {
         // Check if the game inputed is a solvedGame
         self.isSolved = checkIsGameSolved()
     }
-
-    public init() {
+    
+    /// Creates a Solitaire Game with the specified seed.
+    /// - Parameter seed: The seed of the solitaire game to generate
+    public init(seed: SeedInteger) {
         self.undoManager = SolitaireUndoManager()
         self.scoreKeeper = ScoreKeeper()
-        self.seed = SolitaireGame.generateSeed()
+        self.seed = seed
 
         undoManager.target = self
         // Create GamePileIndex.count piles
@@ -118,13 +120,10 @@ public final class SolitaireGame {
         populatePiles()
     }
 
-    /// Creates a Solitaire Game with the specified seed.
-    /// Note: The seed may change as the version of swift changes. This is a side effect of shuffle not being a permanent implementation.
-    /// - Parameter seed: The seed of the solitaire game to generate
-    public init(seed: UInt64) {
+    public init() {
         self.undoManager = SolitaireUndoManager()
         self.scoreKeeper = ScoreKeeper()
-        self.seed = seed
+        self.seed = SolitaireGame.generateSeed()
 
         undoManager.target = self
         // Create GamePileIndex.count piles
@@ -166,7 +165,7 @@ public final class SolitaireGame {
         assert(deck.count == SolitaireGame.totalCards)
 
         var rng = SeededRandomNumberGenerator(seed: seed)
-        deck.shuffle(using: &rng)
+        deck.stableShuffle(using: &rng)
 
         #if PROFILE
         signposter.emitEvent("Column population complete.", id: signpostID)
@@ -357,7 +356,8 @@ extension SolitaireGame {
 
         switch move {
         case .regular(let card, let sourcePile, let destinationPile):
-            return moveCard(card: card, from: sourcePile, to: destinationPile)
+            let result = moveCard(card: card, from: sourcePile, to: destinationPile)
+            return result
         case .reStock:
             return restock()
         case .drawStock(let mode):
@@ -369,16 +369,21 @@ extension SolitaireGame {
 
     @discardableResult
     private func moveCard(card: PlayingCard, from pile: Pile, to destination: Pile) -> Bool {
-        guard isValidMove(card, to: destination) else { return false }
-        guard let index = pile.cards.firstIndex(of: card) else { return false }
+        guard isValidMove(card, to: destination) else {
+            return false }
+        guard let index = pile.cards.firstIndex(of: card) else {
+            return false }
         
         if pile.isFoundation && destination.isFoundation {
             // Let you move foundation cards around
-            guard destination.isEmpty else { return false }
+            guard destination.isEmpty else {
+                return false }
         } else if destination.isFoundation {
-            guard isValidCardFoundationRun(below: index, in: pile) else { return false }
+            guard isValidCardFoundationRun(below: index, in: pile) else {
+                return false }
         } else {
-            guard isValidCardRun(below: index, in: pile) else { return false }
+            guard isValidCardRun(below: index, in: pile) else {
+                return false }
         }
 
         let runLength = pile.cards.count - index
@@ -627,7 +632,9 @@ extension SolitaireGame {
             }
 
             // Only allow a drop if the card is in sequence with the top card and they are different colors
-            return topCard.isInSequence(card) && topCard.isOppositeColor(card)
+            let one = topCard.isInSequence(card)
+            let two = topCard.isOppositeColor(card)
+            return one && two
         }
 
         return false
@@ -679,9 +686,9 @@ extension SolitaireGame: Copyable {
 
 // MARK: Load & Save
 extension SolitaireGame {
-    static let currentDataVersionByte: DataVersionInteger = 3
+    static let currentDataVersionByte: DataVersionInteger = 4
     static let pileSeparator: UInt8 = 0xFF
-    public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth + SecondsInteger.bitWidth + DrawMode.RawValue.bitWidth) / 8
+    public static let headerSize: Int = (DataVersionInteger.bitWidth + ScoreInteger.bitWidth + MoveInteger.bitWidth + RestockInteger.bitWidth + SecondsInteger.bitWidth + DrawMode.RawValue.bitWidth + SeedInteger.bitWidth) / 8
 
     public static func saveGame(game: SolitaireGame) -> [UInt8] {
         var saveData: [UInt8] = []
@@ -699,8 +706,10 @@ extension SolitaireGame {
         let restockBytes = game.restocks.bigEndianBytes
         let secondsBytes = game.seconds.bigEndianBytes
         let drawModeByte = game.config.drawMode.rawValue // No need for big endian bytes, since it is a singular byte.
+        let seedBytes = game.seed.bigEndianBytes
 
         // Insert header in reverse
+        saveData.insert(contentsOf: seedBytes, at: 0)
         saveData.insert(drawModeByte, at: 0)
         saveData.insert(contentsOf: secondsBytes, at: 0)
         saveData.insert(contentsOf: restockBytes, at: 0)
@@ -727,6 +736,7 @@ extension SolitaireGame {
         let restocks = RestockInteger(from: Array(headerData[5...6]))
         let seconds = SecondsInteger(from: Array(headerData[7...8]))
         let drawMode = DrawMode(rawValue: headerData[9]) ?? .one
+        let seed = SeedInteger(from: Array(headerData[10...17]))
 
         // Mutate data to remove header
         let data = Array(data.dropFirst(headerSize))
@@ -762,6 +772,7 @@ extension SolitaireGame {
         }
 
         let game = SolitaireGame(piles: piles)
+        game.seed = seed
         game.score = score
         game.moves = moves
         game.restocks = restocks
