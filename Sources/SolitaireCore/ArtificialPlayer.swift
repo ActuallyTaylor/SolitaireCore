@@ -86,6 +86,7 @@ public class ArtificialPlayer {
          Thoughts:
          At the moment i think the reference copying is not the best forward move. It copies the entire game state including undo managers and score keepers.
          I think this is going to require a restructure
+         We can store a list of moves as we go instead of a game state. That will let us memoize previously seen moves.
          */
         return nil
     }
