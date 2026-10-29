@@ -165,9 +165,40 @@ struct UndoManagerTests {
             #expect(card.isVisible, "Card should be visible in the waste.")
         }
     }
+    
+    @Test("Validate undo re-hides card above card being unveiled")
+    func testUndoHidesTopCard() throws {
+        // Setup a game where we will move the 2 of hearts onto the 3 of spades. This will uncover the 3 of clubs.
+        let gameRep = [[], [], [], [], [], [], ["5HV", "3SV"], ["3C", "2HV"], [], [], [], [], []]
 
-    @Test("Validate undo does not break card visibility")
-    func testUndoDoesNotBreakVisibility() throws {
+        let game = SolitaireGame.loadGame(from: gameRep)
+
+        let columnOne = game.piles[GamePileIndex.columnOne.rawValue]
+        let columnTwo = game.piles[GamePileIndex.columnTwo.rawValue]
+
+        let twoOfHearts = columnTwo.top()!
+
+        // Move the 2 of hearts onto the 3 of spades
+        #expect(game.move(.regular(card: twoOfHearts, sourcePile: columnTwo, destinationPile: columnOne)))
+        #expect(twoOfHearts.pile == columnOne, "The two of hearts should be one column one")
+        
+        let threeOfClubs = columnTwo.top()!
+        #expect(threeOfClubs.suit == .clubs && threeOfClubs.rank == .three, "The first card in the second column should be the three of clubs")
+        #expect(threeOfClubs.isVisible, "The three of clubs should be visible")
+        
+        // Undo the move of the 2 of hearts, should make the 3 of clubs hidden again
+        try game.undo()
+        
+        // Get new versions of the three of clubs and two of hearts
+        let newThreeOfClubs = columnTwo.cards.first!
+        let newTwoOfHearts = columnTwo.cards.last!
+
+        #expect(newTwoOfHearts.pile == columnTwo, "The two of hearts should be back on column two")
+        #expect(!newThreeOfClubs.isVisible, "The three of clubs should no longer be visible")
+    }
+
+    @Test("Validate undo does not break card visibility in stock")
+    func testUndoDoesNotBreakVisibilityInStock() throws {
         let gameRep = [
             ["QH", "3S", "5S"], [ ],
             [], [], [], [],

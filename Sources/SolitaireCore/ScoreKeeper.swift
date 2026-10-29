@@ -22,7 +22,6 @@ final class ScoreKeeper {
         if index >= 1 && source.id != .waste {
             if !source.cards[index - 1].isVisible {
                 scoreChange += Int(ScoreEvent.uncoverCard.scoreChange)
-                source.cards[index - 1].isVisible = true
             }
         }
 

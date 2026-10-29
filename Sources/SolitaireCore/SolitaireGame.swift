@@ -369,21 +369,16 @@ extension SolitaireGame {
 
     @discardableResult
     private func moveCard(card: PlayingCard, from pile: Pile, to destination: Pile) -> Bool {
-        guard isValidMove(card, to: destination) else {
-            return false }
-        guard let index = pile.cards.firstIndex(of: card) else {
-            return false }
+        guard isValidMove(card, to: destination) else { return false }
+        guard let index = pile.cards.firstIndex(of: card) else { return false }
         
         if pile.isFoundation && destination.isFoundation {
             // Let you move foundation cards around
-            guard destination.isEmpty else {
-                return false }
+            guard destination.isEmpty else { return false }
         } else if destination.isFoundation {
-            guard isValidCardFoundationRun(below: index, in: pile) else {
-                return false }
+            guard isValidCardFoundationRun(below: index, in: pile) else { return false }
         } else {
-            guard isValidCardRun(below: index, in: pile) else {
-                return false }
+            guard isValidCardRun(below: index, in: pile) else { return false }
         }
 
         let runLength = pile.cards.count - index
@@ -392,8 +387,16 @@ extension SolitaireGame {
 
         destination.add(cards: cardsToMove)
 
-        let integerScoreChange: Int = scoreKeeper.scoreRegularMove(
-            card: card, source: pile, destination: destination, cardIndex: index)
+        // Uncover the card below the moved card
+        var didUncoverCard: Bool = false
+        if index >= 1 && pile.id != .waste {
+            if !pile.cards[index - 1].isVisible {
+                pile.cards[index - 1].isVisible = true
+                didUncoverCard = true
+            }
+        }
+
+        let integerScoreChange: Int = scoreKeeper.scoreRegularMove(card: card, source: pile, destination: destination, cardIndex: index)
 
         var scoreChange: ScoreInteger = 0
         var negativeScoreChange = false
@@ -413,7 +416,7 @@ extension SolitaireGame {
 
         addMoves(value: 1)
 
-        undoManager.registerUndo(package: .moveCards(cards: originalCardsToMove, source: pile.id, destination: destination.id, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange))
+        undoManager.registerUndo(package: .moveCards(cards: originalCardsToMove, source: pile.id, destination: destination.id, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange, didUncoverBelow: didUncoverCard))
 
         return true
     }

@@ -6,7 +6,7 @@
 //
 
 enum UndoPackage {
-    case moveCards(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex, scoreChange: ScoreInteger, negativeScoreChange: Bool)
+    case moveCards(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex, scoreChange: ScoreInteger, negativeScoreChange: Bool, didUncoverBelow: Bool)
     case drawStock(cards: [PlayingCard])
     case restock(scoreChange: ScoreInteger)
 }
@@ -46,8 +46,8 @@ final class SolitaireUndoManager {
     private func undoPackage(package: UndoPackage) throws(UndoError) {
         switch package {
         case .moveCards(
-            let cards, let source, let destination, let scoreChange, let negativeScoreChange):
-            undoMoveCardPackage(cards: cards, source: source, destination: destination, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange)
+            let cards, let source, let destination, let scoreChange, let negativeScoreChange, let didUncoverCardBelow):
+            undoMoveCardPackage(cards: cards, source: source, destination: destination, scoreChange: scoreChange, negativeScoreChange: negativeScoreChange, didUncoverCardBelow: didUncoverCardBelow)
         case .drawStock(let cards):
             try undoStockPackage(cards: cards)
         case .restock(let scoreChange):
@@ -55,17 +55,17 @@ final class SolitaireUndoManager {
         }
     }
 
-    private func undoMoveCardPackage(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex,scoreChange: ScoreInteger, negativeScoreChange: Bool) {
+    private func undoMoveCardPackage(cards: [PlayingCard], source: GamePileIndex, destination: GamePileIndex,scoreChange: ScoreInteger, negativeScoreChange: Bool, didUncoverCardBelow: Bool) {
         guard let sourcePile = target?.pile(at: source) else { return }
         guard let destinationPile = target?.pile(at: destination) else { return }
 
-        // This allows standard undos (column -> column) to revert the visibility of the card they are undoing onto.
-        if sourcePile.isColumn, sourcePile.cards.count >= 2, !(sourcePile.cardFromTop(offset: 2)?.isVisible ?? false) {
+        // If we uncovered the card below the card we moved, we need to re-cover it.
+        if didUncoverCardBelow {
             sourcePile.top()?.isVisible = false
         }
                         
         destinationPile.remove(cards: cards)
-        sourcePile.add(cards: cards)
+        sourcePile.add(cards: cards, changeVisibility: false)
 
         if negativeScoreChange {
             target?.addScore(value: scoreChange)
